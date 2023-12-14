@@ -1,2 +1,4 @@
 random
-PyGame
+PyGame == 2.5.2
+os
+sys
