@@ -3,6 +3,9 @@ import random
 import os
 import sys
 
+all_sprites = pygame.sprite.Group()
+obstacle = []
+
 
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
@@ -20,8 +23,23 @@ def load_image(name, colorkey=None):
     return image
 
 
-class Car:
-    pass
+class Car(pygame.sprite.Sprite):
+    def __init__(self, *grop):
+        super().__init__(*grop)
+        self.image = pygame.transform.scale(load_image("car.png"), (100, 150))
+        self.rect = self.image.get_rect()
+        self.rect.x = 230
+        self.rect.y = 370
+
+    def update(self, event: pygame.event.Event):
+        if event.key == 1073741903:
+            self.rect.x += 120
+        if event.key == 1073741904:
+            self.rect.x -= 120
+        if event.key == 97:
+            self.rect.x -= 120
+        if event.key == 100:
+            self.rect.x += 120
 
 
 class Board:
@@ -29,11 +47,19 @@ class Board:
         self.width = width
         self.height = height
         self.left = 100
-        self.top = 80
+        self.top = 30
 
-    def render(self, screen: pygame.Surface, all_sprites):
+    def render(self, screen: pygame.Surface):
         pygame.draw.rect(screen, "white", (0, 0, self.width, self.height), 100)
-        pygame.draw.rect(screen, (128, 128, 128), (self.left, self.top, self.width - self.left * 2, self.height - self.top * 2))
+        pygame.draw.rect(screen, (128, 128, 128),
+                         (self.left, self.top, self.width - self.left * 2, self.height - self.top * 2))
+        for i in range(1, 6):
+            if i == 1:
+                pygame.draw.line(screen, "white", (self.left + (120 * i), self.top),
+                                 (self.left + (120 * i), self.height - self.top), 2)
+            else:
+                pygame.draw.line(screen, "white", (self.left + (120 * i), self.top),
+                                 (self.left + (120 * i), self.height - self.top), 2)
         all_sprites.draw(screen)
 
     def set_left_top(self, left, top):
@@ -41,22 +67,24 @@ class Board:
         self.left = left
 
 
-class Obstacle:
-    pass
+class Obstacle(pygame.sprite.Sprite):
+    def __init__(self, *grop):
+        super().__init__(*grop)
+        self.image = pygame.transform.scale(load_image("police.png"), (100, 150))
+        self.rect = self.image.get_rect()
+        self.rect.x = random.randint(230, 230 + 120 * 4)
+        self.rect.y = random.randint(40, 500)
+
+    def update(self):
+        pass
 
 
 def main():
     size = 1000, 600
     pygame.init()
     screen = pygame.display.set_mode(size)
-    all_sprites = pygame.sprite.Group()
-    sprite = pygame.sprite.Sprite(all_sprites)
-    image = load_image("car.png", -1)
-    image1 = pygame.transform.scale(image, (100, 150))
-    sprite.image = image1
-    sprite.rect = sprite.image.get_rect()
-    sprite.rect.x = 110
-    sprite.rect.y = 370
+    car = Car()
+    all_sprites.add(car)
     all_sprites.draw(screen)
     board = Board(size[0], size[1])
     running = True
@@ -64,7 +92,9 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-        board.render(screen, all_sprites)
+            if event.type == 768:
+                car.update(event)
+        board.render(screen)
         pygame.display.update()
     pygame.quit()
 
