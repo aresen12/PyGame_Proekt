@@ -8,6 +8,8 @@ pygame.init()
 screen = pygame.display.set_mode(size)
 all_sprites = pygame.sprite.Group()
 obstacle = []
+horizontal_borders = pygame.sprite.Group()
+vertical_borders = pygame.sprite.Group()
 
 
 def load_image(name, colorkey=None):
@@ -26,10 +28,25 @@ def load_image(name, colorkey=None):
     return image
 
 
+class Border(pygame.sprite.Sprite):
+    # строго вертикальный или строго горизонтальный отрезок
+    def __init__(self, x1, y1, x2, y2):
+        super().__init__(all_sprites)
+        if x1 == x2:  # вертикальная стенка
+            self.add(vertical_borders)
+            self.image = pygame.Surface([1, y2 - y1])
+            self.rect = pygame.Rect(x1, y1, 1, y2 - y1)
+        else:  # горизонтальная стенка
+            self.add(horizontal_borders)
+            self.image = pygame.Surface([x2 - x1, 1])
+            self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
+
+
+
 class Car(pygame.sprite.Sprite):
     def __init__(self, *grop):
         super().__init__(*grop)
-        self.image = pygame.transform.scale(load_image("car.png"), (100, 150))
+        self.image = pygame.transform.scale(load_image("car.png", -1), (100, 150))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.rect.x = 230
@@ -71,18 +88,26 @@ class Board:
         self.left = left
 
 
+board = Board(size[0], size[1])
+
+
 class Obstacle(pygame.sprite.Sprite):
-    def __init__(self, *grop):
+    def __init__(self, *grop, pos=None):
         super().__init__(*grop)
-        self.image = pygame.transform.scale(load_image("police.png"), (100, 150))
+        self.image = pygame.transform.scale(load_image(f"ob{random.randint(0, 2)}.png", colorkey=-1), (100, 150))
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
-        self.rect.x = random.randint(230, 230 + 120 * 4)
-        self.rect.y = random.randint(40, 500)
+        self.rect.x = board.left + random.randint(0, 5) * 120
+        if pos is None:
+            self.rect.y = random.randint(0, 40)
+        else:
+            self.rect.y = random.randint(40, size[1] - 100)
         self.y = self.rect.y
 
     def update(self):
         pass
+
+
 def wait():
     global all_sprites
     all_sprites = pygame.sprite.Group()
@@ -92,21 +117,23 @@ def wait():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 plaing_not = False
-                pygame.quit()
+
             if event.type == pygame.KEYDOWN:
                 main()
+                return None
+    pygame.quit()
 
 
 def main():
     tick = pygame.time.Clock()
     car = Car()
     screen.fill("black")
-    for ob in range(2):
-        obstacle.append(Obstacle())
+    for ob in range(3):
+        obstacle.append(Obstacle(pos=-1))
         all_sprites.add(obstacle[-1])
     all_sprites.add(car)
     all_sprites.draw(screen)
-    board = Board(size[0], size[1])
+
     running = True
     while running:
         for event in pygame.event.get():
@@ -115,13 +142,17 @@ def main():
             if event.type == 768:
                 car.update(event)
         d = tick.tick() / 1000
-
         for ob in obstacle:
             ob: Obstacle
             if not pygame.sprite.collide_mask(ob, car):
                 ob.y += d * 50
                 ob.rect.y = int(ob.y)
+                if ob.y >= size[1]:
+                    obstacle.append(Obstacle())
+                    all_sprites.add(obstacle[-1])
+                    del obstacle[obstacle.index(ob)]
             else:
+                board.render(screen)
                 font = pygame.font.Font(None, 50)
                 text = font.render("Столкновение!", True, "red")
                 text_x = size[0] // 2 - text.get_width() // 2
@@ -131,6 +162,7 @@ def main():
                 screen.blit(text, (text_x, text_y))
                 pygame.draw.rect(screen, (0, 255, 0), (text_x - 10, text_y - 10,
                                                        text_w + 20, text_h + 20), 1)
+
                 pygame.display.update()
                 wait()
                 return None
