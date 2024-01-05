@@ -3,7 +3,7 @@ import random
 import os
 import sys
 
-size = 1000, 600
+size = 900, 600
 pygame.init()
 screen = pygame.display.set_mode(size)
 all_sprites = pygame.sprite.Group()
@@ -42,36 +42,31 @@ class Border(pygame.sprite.Sprite):
             self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
 
 
-
 class Car(pygame.sprite.Sprite):
     def __init__(self, *grop):
         super().__init__(*grop)
         self.image = pygame.transform.scale(load_image("car.png", -1), (100, 150))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
-        self.rect.x = 230
+        self.rect.x = 10 + board.left + random.randint(0, 4) * 120
         self.rect.y = 370
 
     def update(self, event: pygame.event.Event):
-        if event.key == 1073741903:
+        if self.rect.x + 120 < size[0] - board.left and (event.key == 1073741903 or event.key == 100):
             self.rect.x += 120
-        if event.key == 1073741904:
+        if self.rect.x - 120 > board.left and (event.key == 1073741904 or event.key == 97):
             self.rect.x -= 120
-        if event.key == 97:
-            self.rect.x -= 120
-        if event.key == 100:
-            self.rect.x += 120
 
 
 class Board:
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        self.left = 100
+        self.left = 150
         self.top = 30
 
     def render(self, screen: pygame.Surface):
-        pygame.draw.rect(screen, "white", (0, 0, self.width, self.height), 100)
+        pygame.draw.rect(screen, "white", (0, 0, self.width, self.height))
         pygame.draw.rect(screen, (128, 128, 128),
                          (self.left, self.top, self.width - self.left * 2, self.height - self.top * 2))
         for i in range(1, 6):
@@ -89,6 +84,7 @@ class Board:
 
 
 board = Board(size[0], size[1])
+car = Car()
 
 
 class Obstacle(pygame.sprite.Sprite):
@@ -97,12 +93,18 @@ class Obstacle(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(load_image(f"ob{random.randint(0, 2)}.png", colorkey=-1), (100, 150))
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
-        self.rect.x = board.left + random.randint(0, 5) * 120
-        if pos is None:
-            self.rect.y = random.randint(0, 40)
-        else:
-            self.rect.y = random.randint(40, size[1] - 100)
-        self.y = self.rect.y
+        fl = True
+        while fl:
+            fl = False
+            self.rect.x = board.left + random.randint(0, 4) * 120
+            if pos is None:
+                self.rect.y = random.randint(-50, 0)
+            else:
+                self.rect.y = random.randint(40, size[1] - 100)
+            self.y = self.rect.y
+            for i in all_sprites:
+                if pygame.sprite.collide_mask(i, self):
+                    fl = True
 
     def update(self):
         pass
@@ -126,12 +128,13 @@ def wait():
 
 def main():
     tick = pygame.time.Clock()
-    car = Car()
+
     screen.fill("black")
+    all_sprites.add(car)
     for ob in range(3):
         obstacle.append(Obstacle(pos=-1))
         all_sprites.add(obstacle[-1])
-    all_sprites.add(car)
+
     all_sprites.draw(screen)
 
     running = True
@@ -147,9 +150,10 @@ def main():
             if not pygame.sprite.collide_mask(ob, car):
                 ob.y += d * 50
                 ob.rect.y = int(ob.y)
-                if ob.y >= size[1]:
+                if len(obstacle) <= 3 and random.randint(-5000, 5000) == 1:
                     obstacle.append(Obstacle())
                     all_sprites.add(obstacle[-1])
+                if ob.y >= size[1]:
                     del obstacle[obstacle.index(ob)]
             else:
                 board.render(screen)
@@ -160,12 +164,15 @@ def main():
                 text_w = text.get_width()
                 text_h = text.get_height()
                 screen.blit(text, (text_x, text_y))
-                pygame.draw.rect(screen, (0, 255, 0), (text_x - 10, text_y - 10,
-                                                       text_w + 20, text_h + 20), 1)
+                pygame.draw.rect(screen, "red", (text_x - 10, text_y - 10,
+                                                 text_w + 20, text_h + 20), 1)
 
                 pygame.display.update()
                 wait()
                 return None
+        if len(obstacle) == 0:
+            obstacle.append(Obstacle())
+            all_sprites.add(obstacle[-1])
         board.render(screen)
         pygame.display.update()
     pygame.quit()
