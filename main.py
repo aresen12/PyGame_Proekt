@@ -2,6 +2,7 @@ import pygame
 import random
 import os
 import sys
+import sqlite3
 
 size = 900, 600
 pygame.init()
@@ -11,7 +12,8 @@ obstacle = []
 horizontal_borders = pygame.sprite.Group()
 vertical_borders = pygame.sprite.Group()
 running = True
-pygame.mixer.music.load("data/pov.mp3")
+pygame.display.set_caption(title="Машинки")
+
 
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
@@ -22,14 +24,11 @@ def load_image(name, colorkey=None):
     if colorkey is not None:
         image = image.convert()
         if colorkey == -1:
-            colorkey = image.get_at((1, 1))
+            colorkey = image.get_at((0, 0))
         image.set_colorkey(colorkey)
     else:
         image = image.convert_alpha()
     return image
-
-
-pygame.display.set_caption(title="Машинки", icontitle="car.png")
 
 
 class Border(pygame.sprite.Sprite):
@@ -62,17 +61,17 @@ class Car(pygame.sprite.Sprite):
             for ob in obstacle:
                 ob: Obstacle
                 if pygame.sprite.collide_mask(ob, car):
-                    self.rect.x -= 100
+                    self.rect.x -= 120
                     self.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (100, 150))
-                    board.is_plaing = False
+                    board.is_playing = False
         if self.rect.x - 120 > board.left and (event.key == 1073741904 or event.key == 97):
             self.rect.x -= 120
             for ob in obstacle:
                 ob: Obstacle
                 if pygame.sprite.collide_mask(ob, car):
-                    self.rect.x += 100
+                    self.rect.x += 120
                     self.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (110, 170))
-                    board.is_plaing = False
+                    board.is_playing = False
 
 
 class Board:
@@ -82,19 +81,15 @@ class Board:
         self.left = 150
         self.top = 0
         self.ball = 0
-        self.is_plaing = True
+        self.is_playing = True
 
     def render(self):
         pygame.draw.rect(screen, "white", (0, 0, self.width, self.height))
         pygame.draw.rect(screen, (128, 128, 128),
                          (self.left, self.top, self.width - self.left * 2, self.height - self.top * 2))
         for i in range(1, 6):
-            if i == 1:
-                pygame.draw.line(screen, "white", (self.left + (120 * i), self.top),
-                                 (self.left + (120 * i), self.height - self.top), 2)
-            else:
-                pygame.draw.line(screen, "white", (self.left + (120 * i), self.top),
-                                 (self.left + (120 * i), self.height - self.top), 2)
+            pygame.draw.line(screen, "white", (self.left + (120 * i), self.top),
+                             (self.left + (120 * i), self.height - self.top), 2)
         all_sprites.draw(screen)
         font = pygame.font.Font(None, 20)
         text = font.render(f"""Ваш счёт:{board.ball}""", True, "red")
@@ -142,11 +137,11 @@ def wait():
     global all_sprites
     all_sprites = pygame.sprite.Group()
     obstacle.clear()
-    plaing_not = True
-    while plaing_not:
+    playing_not = True
+    while playing_not:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                plaing_not = False
+                playing_not = False
 
             if event.type == pygame.KEYDOWN:
                 main()
@@ -154,12 +149,72 @@ def wait():
     pygame.quit()
 
 
+def start_game():
+    screen = pygame.display.set_mode((900, 600))
+
+    font = pygame.font.SysFont(None, 50)
+    text = ''
+    run = True
+
+    while run:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    return text
+                elif event.key == pygame.K_BACKSPACE:
+                    text = text[:-1]
+                else:
+                    text += event.unicode
+
+        screen.fill('purple')
+        text_surf = font.render(text, True, (255, 0, 0))
+        screen.blit(text_surf, text_surf.get_rect(center=screen.get_rect().center))
+        pygame.display.flip()
+
+
+class Table:
+    def __init__(self, username, ball):
+        self.username = username
+        self.ball = ball
+        self.connection = sqlite3.connect('rating_system.db')
+        self.cursor = self.connection.cursor()
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS Results (
+        id INTEGER PRIMARY KEY,
+        username TEXT NOT NULL,
+        result INTEGER
+        )
+        ''')
+
+        self.connection.commit()
+
+        self.cursor.execute('SELECT username FROM Results WHERE username = ?', (self.username,))
+        results = self.cursor.fetchall()
+        self.cursor.execute('SELECT result FROM Results WHERE username = ?', (self.username,))
+        record = self.cursor.fetchall()
+        if len(results) != 0 and self.ball > record[0][0]:
+            self.cursor.execute('UPDATE Results SET result = ? WHERE username = ?', (self.ball,
+                                                                                     self.username))
+            self.connection.commit()
+        else:
+            self.cursor.execute('INSERT INTO Results (username, result) VALUES (?, ?)', (self.username,
+                                                                                         self.ball))
+            self.connection.commit()
+
+    def get_score(self, username):
+        self.cursor.execute('SELECT result FROM Results WHERE username = ?', (self.username,))
+        record = self.cursor.fetchall()
+        return record[0][0]
+
+
 def main():
-    global running, car
-    car = Car()
-    l_d = -3000  # рандомный диапозон создаем машинко когда randint == 2
+    global running
+    username = start_game()
+    l_d = -3000  # рандомный диапазон создаем машинку когда randint == 2
     l_r = 3000
-    board.is_plaing = True
+    board.is_playing = True
     car.image = pygame.transform.scale(load_image("car.png", colorkey=-1), (100, 150))
     tick = pygame.time.Clock()
     chet = pygame.USEREVENT + 1
@@ -171,8 +226,7 @@ def main():
         all_sprites.add(obstacle[-1])
     all_sprites.draw(screen)
     running = True
-    speed = 50
-    pygame.mixer.music.play(-1)
+    speed = 100
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -181,31 +235,28 @@ def main():
                 car.update(event)
             if event.type == chet:
                 board.set_ball()
-                if board.ball % 15 == 0:
-                    speed = speed + 15
+                if board.ball % 3 == 0:
+                    speed = speed + 30
                     l_d += 200
                     l_r -= 200
         d = tick.tick() / 1000
         for ob in obstacle:
             ob: Obstacle
-            if board.is_plaing and not pygame.sprite.collide_mask(ob, car):
+            if board.is_playing and not pygame.sprite.collide_mask(ob, car):
                 ob.y += d * speed
                 ob.rect.y = int(ob.y)
-                if len(obstacle) < 3 and random.randint(l_d, l_r) == 1:
+                if len(obstacle) <= 3 and random.randint(l_d, l_r) == 1:
                     obstacle.append(Obstacle())
                     all_sprites.add(obstacle[-1])
                 if ob.y >= size[1]:
                     del obstacle[obstacle.index(ob)]
             else:
-
-                board.is_plaing = False
+                board.is_playing = False
                 board.render()
-                car.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (110, 170))
-                all_sprites.draw(screen)
+                table = Table(username, board.ball)
                 font = pygame.font.Font(None, 50)
-                text = font.render(f"""Столкновение! Ваш счёт: {board.ball}""", True, "red")
+                text = font.render(f"""Столкновение! Ваш счёт: {board.ball}, рекорд: {table.get_score(username)}""", True, "red")
                 board.set_ball(clear=-1)
-
                 text_x = size[0] // 2 - text.get_width() // 2
                 text_y = size[1] // 2 - text.get_height() // 2
                 text_w = text.get_width()
@@ -213,7 +264,6 @@ def main():
                 screen.blit(text, (text_x, text_y))
                 pygame.draw.rect(screen, "red", (text_x - 10, text_y - 10,
                                                  text_w + 20, text_h + 20), 1)
-
 
                 pygame.display.update()
                 wait()
