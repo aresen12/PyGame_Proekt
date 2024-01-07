@@ -13,6 +13,7 @@ vertical_borders = pygame.sprite.Group()
 running = True
 pygame.mixer.music.load("data/pov.mp3")
 
+
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
     if not os.path.isfile(fullname):
@@ -63,7 +64,7 @@ class Car(pygame.sprite.Sprite):
                 ob: Obstacle
                 if pygame.sprite.collide_mask(ob, car):
                     self.rect.x -= 100
-                    self.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (100, 150))
+                    self.image = pygame.transform.scale(load_image("crash_car2.png", colorkey=-1), (100, 150))
                     board.is_plaing = False
         if self.rect.x - 120 > board.left and (event.key == 1073741904 or event.key == 97):
             self.rect.x -= 120
@@ -71,7 +72,7 @@ class Car(pygame.sprite.Sprite):
                 ob: Obstacle
                 if pygame.sprite.collide_mask(ob, car):
                     self.rect.x += 100
-                    self.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (110, 170))
+                    self.image = pygame.transform.scale(load_image("crash_car2.png", colorkey=-1), (110, 170))
                     board.is_plaing = False
 
 
@@ -99,6 +100,9 @@ class Board:
         font = pygame.font.Font(None, 20)
         text = font.render(f"""Ваш счёт:{board.ball}""", True, "red")
         screen.blit(text, (800, 30))
+
+    def menu_render(self):
+        pass
 
     def set_left_top(self, left, top):
         self.top = top
@@ -140,6 +144,7 @@ class Obstacle(pygame.sprite.Sprite):
 
 def wait():
     global all_sprites
+    pygame.mixer.music.pause()
     all_sprites = pygame.sprite.Group()
     obstacle.clear()
     plaing_not = True
@@ -154,13 +159,24 @@ def wait():
     pygame.quit()
 
 
+def menu():
+    running_menu = True
+    while running_menu:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running_menu = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                pass
+    pygame.quit()
+
+
 def main():
     global running, car
     car = Car()
     l_d = -3000  # рандомный диапозон создаем машинко когда randint == 2
     l_r = 3000
     board.is_plaing = True
-    car.image = pygame.transform.scale(load_image("car.png", colorkey=-1), (100, 150))
+    car.image = pygame.transform.scale(load_image("car2.png", colorkey=-1), (100, 150))
     tick = pygame.time.Clock()
     chet = pygame.USEREVENT + 1
     pygame.time.set_timer(chet, 2000)
@@ -171,13 +187,15 @@ def main():
         all_sprites.add(obstacle[-1])
     all_sprites.draw(screen)
     running = True
-    speed = 50
+    speed = 70
     pygame.mixer.music.play(-1)
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             if event.type == 768:
+                if event.unicode == ' ':
+                    pygame.mixer.music.pause()
                 car.update(event)
             if event.type == chet:
                 board.set_ball()
@@ -185,6 +203,8 @@ def main():
                     speed = speed + 15
                     l_d += 200
                     l_r -= 200
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                pygame.mixer.music.pause()
         d = tick.tick() / 1000
         for ob in obstacle:
             ob: Obstacle
@@ -200,7 +220,7 @@ def main():
 
                 board.is_plaing = False
                 board.render()
-                car.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (110, 170))
+                car.image = pygame.transform.scale(load_image("crash_car2.png", colorkey=-1), (110, 170))
                 all_sprites.draw(screen)
                 font = pygame.font.Font(None, 50)
                 text = font.render(f"""Столкновение! Ваш счёт: {board.ball}""", True, "red")
@@ -213,7 +233,6 @@ def main():
                 screen.blit(text, (text_x, text_y))
                 pygame.draw.rect(screen, "red", (text_x - 10, text_y - 10,
                                                  text_w + 20, text_h + 20), 1)
-
 
                 pygame.display.update()
                 wait()
