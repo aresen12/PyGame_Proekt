@@ -11,7 +11,6 @@ obstacle = []
 horizontal_borders = pygame.sprite.Group()
 vertical_borders = pygame.sprite.Group()
 running = True
-pygame.display.set_caption(title="Машинки")
 
 
 def load_image(name, colorkey=None):
@@ -23,11 +22,14 @@ def load_image(name, colorkey=None):
     if colorkey is not None:
         image = image.convert()
         if colorkey == -1:
-            colorkey = image.get_at((0, 0))
+            colorkey = image.get_at((1, 1))
         image.set_colorkey(colorkey)
     else:
         image = image.convert_alpha()
     return image
+
+
+pygame.display.set_caption(title="Машинки", icontitle="car.png")
 
 
 class Border(pygame.sprite.Sprite):
@@ -60,7 +62,7 @@ class Car(pygame.sprite.Sprite):
             for ob in obstacle:
                 ob: Obstacle
                 if pygame.sprite.collide_mask(ob, car):
-                    self.rect.x -= 120
+                    self.rect.x -= 100
                     self.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (100, 150))
                     board.is_plaing = False
         if self.rect.x - 120 > board.left and (event.key == 1073741904 or event.key == 97):
@@ -68,7 +70,7 @@ class Car(pygame.sprite.Sprite):
             for ob in obstacle:
                 ob: Obstacle
                 if pygame.sprite.collide_mask(ob, car):
-                    self.rect.x += 120
+                    self.rect.x += 100
                     self.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (110, 170))
                     board.is_plaing = False
 
@@ -153,7 +155,8 @@ def wait():
 
 
 def main():
-    global running
+    global running, car
+    car = Car()
     l_d = -3000  # рандомный диапозон создаем машинко когда randint == 2
     l_r = 3000
     board.is_plaing = True
@@ -193,11 +196,15 @@ def main():
                 if ob.y >= size[1]:
                     del obstacle[obstacle.index(ob)]
             else:
+
                 board.is_plaing = False
                 board.render()
+                car.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (110, 170))
+                all_sprites.draw(screen)
                 font = pygame.font.Font(None, 50)
-                text = font.render(f"""Столкновение! Ваш счёт:{board.ball}""", True, "red")
+                text = font.render(f"""Столкновение! Ваш счёт: {board.ball}""", True, "red")
                 board.set_ball(clear=-1)
+
                 text_x = size[0] // 2 - text.get_width() // 2
                 text_y = size[1] // 2 - text.get_height() // 2
                 text_w = text.get_width()
@@ -205,6 +212,7 @@ def main():
                 screen.blit(text, (text_x, text_y))
                 pygame.draw.rect(screen, "red", (text_x - 10, text_y - 10,
                                                  text_w + 20, text_h + 20), 1)
+
 
                 pygame.display.update()
                 wait()
