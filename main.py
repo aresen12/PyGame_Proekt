@@ -11,7 +11,7 @@ obstacle = []
 horizontal_borders = pygame.sprite.Group()
 vertical_borders = pygame.sprite.Group()
 running = True
-
+pygame.mixer.music.load("data/pov.mp3")
 
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
@@ -172,6 +172,7 @@ def main():
     all_sprites.draw(screen)
     running = True
     speed = 50
+    pygame.mixer.music.play(-1)
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
