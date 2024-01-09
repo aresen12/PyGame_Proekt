@@ -32,18 +32,28 @@ def load_image(name, colorkey=None):
     return image
 
 
-class Border(pygame.sprite.Sprite):
-    # строго вертикальный или строго горизонтальный отрезок
-    def __init__(self, x1, y1, x2, y2):
-        super().__init__(all_sprites)
-        if x1 == x2:  # вертикальная стенка
-            self.add(vertical_borders)
-            self.image = pygame.Surface([1, y2 - y1])
-            self.rect = pygame.Rect(x1, y1, 1, y2 - y1)
-        else:  # горизонтальная стенка
-            self.add(horizontal_borders)
-            self.image = pygame.Surface([x2 - x1, 1])
-            self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
+class Button:
+    def __init__(self, command=None, text=None, x=0, y=0, width=0, height=0, color="blue", color_text="red"):
+        self.command = command
+        self.text = text
+        self.y = y
+        self.x = x
+        self.width = width
+        self.height = height
+        self.color = color
+        self.color_text = color_text
+
+    def render(self):
+        pygame.draw.rect(screen, self.color, (self.x, self.y, self.height, self.width))
+        font = pygame.font.Font(None, 20)
+        screen.blit(font.render(str(self.text), True, self.color_text), (self.x + 5, self.y + 5))
+
+    def update(self, event):
+        print(self.y <= event.pos[1] <= self.y + self.width and self.x <= event.pos[0] <= self.x + self.height)
+        if self.y <= event.pos[1] <= self.y + self.width and self.x <= event.pos[0] <= self.x + self.height:
+            if not (self.command is None):
+                self.command()
+        return None
 
 
 class Car(pygame.sprite.Sprite):
@@ -145,12 +155,14 @@ def wait():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 playing_not = False
-
             if event.type == pygame.KEYDOWN:
                 main()
                 return None
     pygame.quit()
     sys.exit()
+
+
+username = None
 
 
 class Table:
@@ -177,7 +189,8 @@ class Table:
         self.cursor = self.connection.cursor()
         results = self.cursor.execute(f'SELECT result FROM Results WHERE username = "{self.username}"').fetchone()
         self.ball = board.ball
-        if len(results) == 0:
+        print(results)
+        if results is None:
             self.cursor.execute('INSERT INTO Results (username, result) VALUES (?, ?)', (self.username,
                                                                                          self.ball))
             self.connection.commit()
@@ -186,7 +199,7 @@ class Table:
             self.connection.commit()
         self.connection.close()
 
-    def get_score(self, username):
+    def get_score(self):
         self.connection = sqlite3.connect("rating_system.db")
         self.cursor = self.connection.cursor()
         self.cursor.execute('SELECT result FROM Results WHERE username = ?', (self.username,))
@@ -216,7 +229,10 @@ class Table:
         bd.close()
 
     def sing_out(self):
-        global board, car
+        global board, car, username, menu
+        username = None
+        self.username = None
+        menu = Menu()
         board = Board(size[0], size[1])
         car = Car()
         bd = sqlite3.connect("rating_system.db")
@@ -224,6 +240,13 @@ class Table:
         curr.execute("""DELETE FROM user""")
         bd.commit()
         bd.close()
+
+    def get_results(self):
+        self.connection = sqlite3.connect("rating_system.db")
+        self.cursor = self.connection.cursor()
+        res = self.cursor.execute("SELECT * FROM results").fetchall()
+        self.connection.close()
+        return res
 
 
 table = Table(None, board.ball)
@@ -239,15 +262,23 @@ class Menu:
         else:
             self.sing = False
 
-    def render(self):
+    def render(self, buttons):
         font = pygame.font.Font(None, 50)
         font2 = pygame.font.Font(None, 20)
         text = font.render("Добро Пожаловать!", True, "red")
         screen.blit(text, (size[1] // 2, 300))
         screen.blit(font2.render(str(self.username), True, "red"), (750, 50))
-        pygame.draw.rect(screen, "blue", (750, 100, 100, 30))
-        screen.blit(font2.render("Выход", True, "red"), (765, 110))
-        pygame.draw.rect(screen, "blue", (size[1] // 2, 500, 100, 30))
+        screen.blit(font2.render("Вы Вошли как:", True, "red"), (750, 20))
+        res = table.get_results()
+        if not (res is None):
+            height = 100
+            res.sort(key=lambda x: x[2], reverse=True)
+            for user in range(len(res)):
+                screen.blit(font2.render(f"{user + 1}. {res[user][1].strip()}: {res[user][2]}", True, "red"),
+                            (110, height))
+                height += 30
+        for button in buttons:
+            button.render()
 
     def sing_up(self):
         font = pygame.font.Font(None, 50)
@@ -260,6 +291,7 @@ class Menu:
         if self.sing:
             if event.key == pygame.K_RETURN:
                 global username
+                self.text = self.text.strip()
                 self.username = self.text
                 table.username = self.text
                 username = self.username
@@ -277,8 +309,13 @@ menu = Menu()
 
 
 def start_game():
+    buttons = []
     run = True
     pygame.mixer.music.pause()
+    button_out = Button(x=750, y=100, height=100, width=30, command=table.sing_out, text="Выход")
+    buttons.append(button_out)
+    start_btn = Button(x=size[0] // 2, y=500, height=100, width=30, command=main, text="Старт")
+    buttons.append(start_btn)
     while run:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -287,18 +324,15 @@ def start_game():
             elif event.type == pygame.KEYDOWN:
                 menu.updata(event)
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if 750 <= event.pos[0] <= 850 and 100 <= event.pos[1] <= 130:
-                    global username
-                    table.sing_out()
-                    menu.username = None
-                    username = None
+                button_out.update(event)
+                start_btn.update(event)
         screen.fill("purple")
         if menu.username is None:
             menu.sing_up()
         else:
-            menu.render()
+            menu.render(buttons)
         pygame.display.update()
-
+    return None
 
 def main():
     global running, all_sprites, board
@@ -328,8 +362,10 @@ def main():
                 board.set_ball()
                 if board.ball % 3 == 0:
                     speed = speed + 30
-                    l_d += 200
-                    l_r -= 200
+                    if l_d > -200:
+                        l_d += 200
+                    if l_r < 200:
+                        l_r -= 200
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if 800 <= event.pos[0] <= 890 and 100 <= event.pos[1] <= 130:
                     obstacle.clear()
@@ -353,7 +389,9 @@ def main():
                 board.render()
                 pygame.mixer.music.pause()
                 font = pygame.font.Font(None, 50)
-                text = font.render(f"""Столкновение! Ваш счёт: {board.ball}, рекорд: {table.get_score(username)}""",
+                car.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (100, 150))
+                all_sprites.draw(screen)
+                text = font.render(f"""Столкновение! Ваш счёт: {board.ball}, рекорд: {table.get_score()}""",
                                    True, "red")
                 table.updata_user()
                 board.set_ball(clear=-1)
