@@ -381,6 +381,7 @@ def start_game():
 
 
 def main():
+    pygame.mixer.music.load("data/pov.mp3")
     global running, all_sprites, board
     l_d = -3000  # рандомный диапазон создаем машинку когда randint == 2
     l_r = 3000
@@ -412,6 +413,9 @@ def main():
                         l_d += 200
                     if l_r < 200:
                         l_r -= 200
+                if board.ball == 60:
+                    pygame.mixer.music.load("data/Super_bal.MP3")
+                    pygame.mixer.music.play(-1)
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if 800 <= event.pos[0] <= 890 and 100 <= event.pos[1] <= 130:
                     obstacle.clear()
