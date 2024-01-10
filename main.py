@@ -44,9 +44,10 @@ class Button:
         self.color_text = color_text
 
     def render(self):
-        pygame.draw.rect(screen, self.color, (self.x, self.y, self.height, self.width))
-        font = pygame.font.Font(None, 20)
-        screen.blit(font.render(str(self.text), True, self.color_text), (self.x + 5, self.y + 5))
+        rect = pygame.draw.rect(screen, self.color, (self.x, self.y, self.height, self.width))
+        font = pygame.font.Font(None, 25)
+        text = font.render(str(self.text), True, self.color_text)
+        screen.blit(text, text.get_rect(center=rect.center))
 
     def update(self, event):
         print(self.y <= event.pos[1] <= self.y + self.width and self.x <= event.pos[0] <= self.x + self.height)
@@ -57,13 +58,14 @@ class Button:
 
 
 class Car(pygame.sprite.Sprite):
-    def __init__(self, *grop):
+    def __init__(self, *grop, number=1):
         super().__init__(*grop)
-        self.image = pygame.transform.scale(load_image("car.png", colorkey=-1), (100, 150))
+        self.image = pygame.transform.scale(load_image(f"car{number}.png", colorkey=-1), (100, 150))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.rect.x = 10 + board.left + random.randint(0, 4) * 120
-        self.rect.y = 380
+        self.rect.y = 425
+        self.number = number
 
     def update(self, event: pygame.event.Event):
         global running
@@ -251,6 +253,31 @@ class Table:
 
 table = Table(None, board.ball)
 username = table.username
+watching = True
+
+
+def close_wind():
+    global watching
+    watching = False
+
+
+def results_look():
+    global watching
+    watching = True
+    buttons = []
+    close_btn = Button(color_text="white", color="#a35713", x=800, y=100, text="Закрыть", width=30, height=100,
+                       command=close_wind)
+    buttons.append(close_btn)
+    while watching:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                watching = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                close_btn.update(event)
+        menu.watching_results()
+        for button in buttons:
+            button.render()
+        pygame.display.update()
 
 
 class Menu:
@@ -263,24 +290,24 @@ class Menu:
             self.sing = False
 
     def render(self, buttons):
+        fon = pygame.transform.scale(load_image('garage.jpg'), (900, 600))
+        screen.blit(fon, (0, 0))
         font = pygame.font.Font(None, 50)
-        font2 = pygame.font.Font(None, 20)
-        text = font.render("Добро Пожаловать!", True, "red")
-        screen.blit(text, (size[1] // 2, 300))
-        screen.blit(font2.render(str(self.username), True, "red"), (750, 50))
-        screen.blit(font2.render("Вы Вошли как:", True, "red"), (750, 20))
-        res = table.get_results()
-        if not (res is None):
-            height = 100
-            res.sort(key=lambda x: x[2], reverse=True)
-            for user in range(len(res)):
-                screen.blit(font2.render(f"{user + 1}. {res[user][1].strip()}: {res[user][2]}", True, "red"),
-                            (110, height))
-                height += 30
+        font2 = pygame.font.Font(None, 25)
+        # text = font.render("Добро", True, (255, 255, 255))
+        # screen.blit(text, ((size[1] // 2) + 200, 190))
+        # screen.blit(font.render("Пожаловать!", True, (255, 255, 255)), (size[1] // 2 + 150, 230))
+        screen.blit(font2.render(str(self.username), True, "#a35713"), (750, 50))
+        screen.blit(font2.render("Вы Вошли как:", True, "#a35713"), (750, 20))
+        fon = pygame.transform.scale(load_image('yel_car.png', colorkey=-1), (353, 200))
+        screen.blit(fon, (370, 385))
         for button in buttons:
             button.render()
 
     def sing_up(self):
+        screen.fill((228, 189, 114))
+        fon = pygame.transform.scale(load_image('font.jpg'), (484, 600))
+        screen.blit(fon, (225, 0))
         font = pygame.font.Font(None, 50)
         text2 = font.render("Введите своё имя", True, "red")
         screen.blit(text2, (size[1] // 2, 200))
@@ -304,6 +331,19 @@ class Menu:
         else:
             main()
 
+    def watching_results(self):
+        fon = pygame.transform.scale(load_image('board.png'), (900, 600))
+        screen.blit(fon, (0, 0))
+        font2 = pygame.font.Font(None, 20)
+        res = table.get_results()
+        if not (res is None):
+            height = 250
+            res.sort(key=lambda x: x[2], reverse=True)
+            for user in range(len(res)):
+                screen.blit(font2.render(f"{user + 1}. {res[user][1].strip()}: {res[user][2]}", True, "white"),
+                            (450, height))
+                height += 30
+
 
 menu = Menu()
 
@@ -312,10 +352,15 @@ def start_game():
     buttons = []
     run = True
     pygame.mixer.music.pause()
-    button_out = Button(x=750, y=100, height=100, width=30, command=table.sing_out, text="Выход")
+    button_out = Button(color="#a35713", color_text="white", x=750, y=100, height=100, width=30, command=table.sing_out,
+                        text="Выход")
     buttons.append(button_out)
-    start_btn = Button(x=size[0] // 2, y=500, height=100, width=30, command=main, text="Старт")
+    start_btn = Button(color="#a35713", color_text="white", x=size[0] // 2 - 275, y=525, height=100, width=30,
+                       command=main, text="Старт")
+    pokaz_btn = Button(color="#a35713", color_text="white", x=(size[1] // 2 + 200), y=190, height=150, width=60,
+                       command=results_look, text="Доска Почета")
     buttons.append(start_btn)
+    buttons.append(pokaz_btn)
     while run:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -324,8 +369,8 @@ def start_game():
             elif event.type == pygame.KEYDOWN:
                 menu.updata(event)
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                button_out.update(event)
-                start_btn.update(event)
+                for button in buttons:
+                    button.update(event)
         screen.fill("purple")
         if menu.username is None:
             menu.sing_up()
@@ -334,12 +379,13 @@ def start_game():
         pygame.display.update()
     return None
 
+
 def main():
     global running, all_sprites, board
     l_d = -3000  # рандомный диапазон создаем машинку когда randint == 2
     l_r = 3000
     board.is_playing = True
-    car.image = pygame.transform.scale(load_image("car.png", colorkey=-1), (100, 150))
+    car.image = pygame.transform.scale(load_image(f"car{car.number}.png", colorkey=-1), (100, 150))
     tick = pygame.time.Clock()
     chet = pygame.USEREVENT + 1
     pygame.time.set_timer(chet, 2000)
