@@ -95,14 +95,21 @@ class Board:
         self.top = 0
         self.ball = 0
         self.is_playing = True
+        self.pos_y = -600
+        self.image = load_image('road.jpg')
 
-    def render(self):
+    def render(self, y=0):
         pygame.draw.rect(screen, "white", (0, 0, self.width, self.height))
         pygame.draw.rect(screen, (128, 128, 128),
                          (self.left, self.top, self.width - self.left * 2, self.height - self.top * 2))
         for i in range(1, 6):
             pygame.draw.line(screen, "white", (self.left + (120 * i), self.top),
                              (self.left + (120 * i), self.height - self.top), 2)
+        self.pos_y += y
+        if int(self.pos_y) == -600 + 165 * 3 - 2:
+            self.pos_y = - 600
+        print(self.pos_y)
+        screen.blit(self.image, (150, self.pos_y))
         all_sprites.draw(screen)
         font = pygame.font.Font(None, 20)
         pygame.draw.rect(screen, "blue", (800, 100, 90, 30))
@@ -436,7 +443,7 @@ def main():
                     del obstacle[obstacle.index(ob)]
             else:
                 board.is_playing = False
-                board.render()
+                board.render(d * speed)
                 pygame.mixer.music.pause()
                 font = pygame.font.Font(None, 50)
                 car.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (100, 150))
@@ -459,7 +466,7 @@ def main():
         if len(obstacle) == 0:
             obstacle.append(Obstacle())
             all_sprites.add(obstacle[-1])
-        board.render()
+        board.render(d * speed)
         pygame.display.update()
     pygame.quit()
 
