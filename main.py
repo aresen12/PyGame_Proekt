@@ -12,7 +12,7 @@ obstacle = []
 horizontal_borders = pygame.sprite.Group()
 vertical_borders = pygame.sprite.Group()
 running = True
-pygame.display.set_caption(title="Машинки", icontitle="data/car1.png")
+pygame.display.set_caption(title="Машинки")
 pygame.mixer.music.load("data/pov.mp3")
 
 
@@ -102,16 +102,21 @@ class Board:
         self.top = 0
         self.ball = 0
         self.is_playing = True
+        self.pos_y = -600
+        self.image = load_image('road.jpg')
 
-    def render(self, grass_pos):
-
-        screen.blit(fon, (0, grass_pos))
-        screen.blit(fon, (0, -size[1] + grass_pos))
+    def render(self, y=0):
+        pygame.draw.rect(screen, "white", (0, 0, self.width, self.height))
         pygame.draw.rect(screen, (128, 128, 128),
                          (self.left, self.top, self.width - self.left * 2, self.height - self.top * 2))
         for i in range(1, 6):
             pygame.draw.line(screen, "white", (self.left + (120 * i), self.top),
                              (self.left + (120 * i), self.height - self.top), 2)
+        self.pos_y += y
+        if int(self.pos_y) == -600 + 165 * 3 - 2:
+            self.pos_y = - 600
+        print(self.pos_y)
+        screen.blit(self.image, (150, self.pos_y))
         all_sprites.draw(screen)
         font = pygame.font.Font(None, 20)
         pygame.draw.rect(screen, "blue", (800, 100, 90, 30))
@@ -434,7 +439,6 @@ def main():
     global running, all_sprites, board, car
     l_d = -3000  # рандомный диапазон создаем машинку когда randint == 2
     l_r = 3000
-    grass_pos = 0
     board.is_playing = True
     car = Car()
     tick = pygame.time.Clock()
@@ -474,9 +478,6 @@ def main():
                     start_game()
                     return None
         d = tick.tick() / 1000
-        if int(grass_pos) == 600:
-            grass_pos = 0
-        grass_pos += speed * d
         for ob in obstacle:
             ob: Obstacle
             if board.is_playing and not pygame.sprite.collide_mask(ob, car):
@@ -489,7 +490,7 @@ def main():
                     del obstacle[obstacle.index(ob)]
             else:
                 board.is_playing = False
-                board.render(int(grass_pos))
+                board.render(d * speed)
                 pygame.mixer.music.pause()
                 font = pygame.font.Font(None, 50)
                 car.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (100, 150))
@@ -512,7 +513,7 @@ def main():
         if len(obstacle) == 0:
             obstacle.append(Obstacle())
             all_sprites.add(obstacle[-1])
-        board.render(int(grass_pos))
+        board.render(d * speed)
         pygame.display.update()
     pygame.quit()
 
