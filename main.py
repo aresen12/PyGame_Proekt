@@ -106,9 +106,8 @@ class Board:
             pygame.draw.line(screen, "white", (self.left + (120 * i), self.top),
                              (self.left + (120 * i), self.height - self.top), 2)
         self.pos_y += y
-        if int(self.pos_y) == -600 + 165 * 3 - 2:
+        if int(self.pos_y) in range(-600 + 165 * 3 - 2, -600 + 165 * 3 + 3):
             self.pos_y = - 600
-        print(self.pos_y)
         screen.blit(self.image, (150, self.pos_y))
         all_sprites.draw(screen)
         font = pygame.font.Font(None, 20)
