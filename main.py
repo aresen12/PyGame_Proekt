@@ -12,7 +12,7 @@ obstacle = []
 horizontal_borders = pygame.sprite.Group()
 vertical_borders = pygame.sprite.Group()
 running = True
-pygame.display.set_caption(title="Машинки")
+pygame.display.set_caption(title="Машинки", icontitle="data/car1.png")
 pygame.mixer.music.load("data/pov.mp3")
 
 
@@ -30,6 +30,10 @@ def load_image(name, colorkey=None):
     else:
         image = image.convert_alpha()
     return image
+
+
+grass = load_image('grass.jpg')
+fon = pygame.transform.scale(grass, (900, 600))
 
 
 class Button:
@@ -50,11 +54,13 @@ class Button:
         screen.blit(text, text.get_rect(center=rect.center))
 
     def update(self, event):
-        print(self.y <= event.pos[1] <= self.y + self.width and self.x <= event.pos[0] <= self.x + self.height)
         if self.y <= event.pos[1] <= self.y + self.width and self.x <= event.pos[0] <= self.x + self.height:
             if not (self.command is None):
                 self.command()
         return None
+
+    def set_text(self, text: str):
+        self.text = text.strip()
 
 
 class Car(pygame.sprite.Sprite):
@@ -63,7 +69,8 @@ class Car(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(load_image(f"car{number}.png", colorkey=-1), (100, 150))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
-        self.rect.x = 10 + board.left + random.randint(0, 4) * 120
+        self.number_pos = random.randint(0, 4)
+        self.rect.x = 10 + board.left + self.number_pos * 120
         self.rect.y = 425
         self.number = number
 
@@ -74,7 +81,7 @@ class Car(pygame.sprite.Sprite):
             for ob in obstacle:
                 ob: Obstacle
                 if pygame.sprite.collide_mask(ob, car):
-                    self.rect.x -= 120
+                    self.rect.x -= 100
                     self.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (100, 150))
                     board.is_playing = False
         if self.rect.x - 120 > board.left and (event.key == 1073741904 or event.key == 97):
@@ -82,8 +89,8 @@ class Car(pygame.sprite.Sprite):
             for ob in obstacle:
                 ob: Obstacle
                 if pygame.sprite.collide_mask(ob, car):
-                    self.rect.x += 120
-                    self.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (110, 170))
+                    self.rect.x += 100
+                    self.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (100, 150))
                     board.is_playing = False
 
 
@@ -96,8 +103,10 @@ class Board:
         self.ball = 0
         self.is_playing = True
 
-    def render(self):
-        pygame.draw.rect(screen, "white", (0, 0, self.width, self.height))
+    def render(self, grass_pos):
+
+        screen.blit(fon, (0, grass_pos))
+        screen.blit(fon, (0, -size[1] + grass_pos))
         pygame.draw.rect(screen, (128, 128, 128),
                          (self.left, self.top, self.width - self.left * 2, self.height - self.top * 2))
         for i in range(1, 6):
@@ -148,8 +157,28 @@ class Obstacle(pygame.sprite.Sprite):
         pass
 
 
+menu_flag = False
+new_game = False
+
+
+def new():
+    global menu_flag
+    menu_flag = True
+
+
+def menu_fun():
+    global new_game
+    new_game = True
+
+
 def wait():
-    global all_sprites
+    pygame.mixer.music.load("data/bax.mp3")
+    pygame.mixer.music.play()
+    global all_sprites, new_game, menu_flag
+    menu_flag = False
+    new_game = False
+    buttons = [Button(text="Меню", x=370, y=330, width=30, height=100, command=menu_fun),
+               Button(text="заново", x=510, y=330, width=30, height=100, command=new)]
     all_sprites = pygame.sprite.Group()
     obstacle.clear()
     playing_not = True
@@ -158,8 +187,21 @@ def wait():
             if event.type == pygame.QUIT:
                 playing_not = False
             if event.type == pygame.KEYDOWN:
-                main()
-                return None
+                if event.unicode == " ":
+                    main()
+                    return None
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                for button in buttons:
+                    button.update(event)
+        for button in buttons:
+            button.render()
+        if new_game:
+            new()
+            return None
+        if menu_flag:
+            main()
+            return None
+        pygame.display.update()
     pygame.quit()
     sys.exit()
 
@@ -182,7 +224,12 @@ class Table:
         result INTEGER
         )
         ''')
-
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS user (
+    id    INTEGER NOT NULL
+                  CONSTRAINT genres_pk PRIMARY KEY AUTOINCREMENT,
+    username TEXT
+);
+''')
         self.connection.commit()
         self.connection.close()
 
@@ -316,7 +363,7 @@ class Menu:
 
     def updata(self, event):
         if self.sing:
-            if event.key == pygame.K_RETURN:
+            if event.key == pygame.K_RETURN and self.text.strip() != "":
                 global username
                 self.text = self.text.strip()
                 self.username = self.text
@@ -326,7 +373,7 @@ class Menu:
                 table.sistem()
             elif event.key == pygame.K_BACKSPACE:
                 self.text = self.text[:-1]
-            else:
+            elif event.unicode != "":
                 self.text += event.unicode
         else:
             main()
@@ -337,9 +384,11 @@ class Menu:
         font2 = pygame.font.Font(None, 20)
         res = table.get_results()
         if not (res is None):
-            height = 250
+            height = 230
             res.sort(key=lambda x: x[2], reverse=True)
             for user in range(len(res)):
+                if user > 7:
+                    break
                 screen.blit(font2.render(f"{user + 1}. {res[user][1].strip()}: {res[user][2]}", True, "white"),
                             (450, height))
                 height += 30
@@ -382,11 +431,12 @@ def start_game():
 
 def main():
     pygame.mixer.music.load("data/pov.mp3")
-    global running, all_sprites, board
+    global running, all_sprites, board, car
     l_d = -3000  # рандомный диапазон создаем машинку когда randint == 2
     l_r = 3000
+    grass_pos = 0
     board.is_playing = True
-    car.image = pygame.transform.scale(load_image(f"car{car.number}.png", colorkey=-1), (100, 150))
+    car = Car()
     tick = pygame.time.Clock()
     chet = pygame.USEREVENT + 1
     pygame.time.set_timer(chet, 2000)
@@ -402,7 +452,7 @@ def main():
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
+                sys.exit(0)
             if event.type == 768:
                 car.update(event)
             if event.type == chet:
@@ -424,6 +474,9 @@ def main():
                     start_game()
                     return None
         d = tick.tick() / 1000
+        if int(grass_pos) == 600:
+            grass_pos = 0
+        grass_pos += speed * d
         for ob in obstacle:
             ob: Obstacle
             if board.is_playing and not pygame.sprite.collide_mask(ob, car):
@@ -436,7 +489,7 @@ def main():
                     del obstacle[obstacle.index(ob)]
             else:
                 board.is_playing = False
-                board.render()
+                board.render(int(grass_pos))
                 pygame.mixer.music.pause()
                 font = pygame.font.Font(None, 50)
                 car.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (100, 150))
@@ -459,7 +512,7 @@ def main():
         if len(obstacle) == 0:
             obstacle.append(Obstacle())
             all_sprites.add(obstacle[-1])
-        board.render()
+        board.render(int(grass_pos))
         pygame.display.update()
     pygame.quit()
 
