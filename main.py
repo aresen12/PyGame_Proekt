@@ -32,8 +32,7 @@ def load_image(name, colorkey=None):
     return image
 
 
-grass = load_image('grass.jpg')
-fon = pygame.transform.scale(grass, (900, 600))
+
 
 
 class Button:
@@ -113,8 +112,7 @@ class Board:
             pygame.draw.line(screen, "white", (self.left + (120 * i), self.top),
                              (self.left + (120 * i), self.height - self.top), 2)
         self.pos_y += y
-
-        if int(self.pos_y) in range(-600 + 165 * 3 - 2, -600 + 165 * 3 + 3):
+        if int(self.pos_y) >= -600 + 165 * 3 - 2:
             self.pos_y = - 600
         screen.blit(self.image, (150, self.pos_y))
         all_sprites.draw(screen)
@@ -342,7 +340,7 @@ class Menu:
             self.sing = False
 
     def render(self, buttons):
-        fon = pygame.transform.scale(load_image('garage.jpg'), (900, 600))
+        fon = pygame.transform.scale(load_image('cars.jpg'), (900, 600))
         screen.blit(fon, (0, 0))
         font = pygame.font.Font(None, 50)
         font2 = pygame.font.Font(None, 25)
@@ -513,7 +511,7 @@ def main():
         if len(obstacle) == 0:
             obstacle.append(Obstacle())
             all_sprites.add(obstacle[-1])
-        board.render(d * speed)
+        board.render(d * (speed + 30))
         pygame.display.update()
     pygame.quit()
 
