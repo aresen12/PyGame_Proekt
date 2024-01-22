@@ -32,9 +32,6 @@ def load_image(name, colorkey=None):
     return image
 
 
-
-
-
 class Button:
     def __init__(self, command=None, text=None, x=0, y=0, width=0, height=0, color="blue", color_text="red"):
         self.command = command
@@ -69,22 +66,22 @@ class Car(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.number_pos = random.randint(0, 4)
-        self.rect.x = 10 + board.left + self.number_pos * 120
+        self.rect.x = board.left + self.number_pos * 100
         self.rect.y = 425
         self.number = number
 
     def update(self, event: pygame.event.Event):
         global running
-        if self.rect.x + 120 < size[0] - board.left and (event.key == 1073741903 or event.key == 100):
-            self.rect.x += 120
+        if self.rect.x + 100 < size[0] - board.left and (event.key == 1073741903 or event.key == 100):
+            self.rect.x += 100
             for ob in obstacle:
                 ob: Obstacle
                 if pygame.sprite.collide_mask(ob, car):
                     self.rect.x -= 100
                     self.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (100, 150))
                     board.is_playing = False
-        if self.rect.x - 120 > board.left and (event.key == 1073741904 or event.key == 97):
-            self.rect.x -= 120
+        if self.rect.x > board.left and (event.key == 1073741904 or event.key == 97):
+            self.rect.x -= 100
             for ob in obstacle:
                 ob: Obstacle
                 if pygame.sprite.collide_mask(ob, car):
@@ -102,7 +99,7 @@ class Board:
         self.ball = 0
         self.is_playing = True
         self.pos_y = -600
-        self.image = load_image('road.jpg')
+        self.image = load_image('дорога 2_png.png')
 
     def render(self, y=0):
         pygame.draw.rect(screen, "white", (0, 0, self.width, self.height))
@@ -112,7 +109,7 @@ class Board:
             pygame.draw.line(screen, "white", (self.left + (120 * i), self.top),
                              (self.left + (120 * i), self.height - self.top), 2)
         self.pos_y += y
-        if int(self.pos_y) >= -600 + 165 * 3 - 2:
+        if int(self.pos_y) >= -600 + 175 * 3 - 2:
             self.pos_y = - 600
         screen.blit(self.image, (150, self.pos_y))
         all_sprites.draw(screen)
@@ -140,13 +137,13 @@ car = Car()
 class Obstacle(pygame.sprite.Sprite):
     def __init__(self, *grop, pos=None):
         super().__init__(*grop)
-        self.image = pygame.transform.scale(load_image(f"ob{random.randint(0, 2)}.png", colorkey=-1), (100, 150))
+        self.image = pygame.transform.scale(load_image(f"ob{random.randint(0, 2)}.png", colorkey=-1), (80, 150))
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         fl = True
         while fl:
             fl = False
-            self.rect.x = 10 + board.left + random.randint(0, 4) * 120
+            self.rect.x = 10 + board.left + random.randint(0, 5) * 100
             if pos is None:
                 self.rect.y = random.randint(-200, -100)
             else:
@@ -340,7 +337,7 @@ class Menu:
             self.sing = False
 
     def render(self, buttons):
-        fon = pygame.transform.scale(load_image('cars.jpg'), (900, 600))
+        fon = pygame.transform.scale(load_image('cars2.jpg'), (900, 600))
         screen.blit(fon, (0, 0))
         font = pygame.font.Font(None, 50)
         font2 = pygame.font.Font(None, 25)
@@ -358,8 +355,8 @@ class Menu:
         screen.fill((228, 189, 114))
         fon = pygame.transform.scale(load_image('font.jpg'), (484, 600))
         screen.blit(fon, (225, 0))
-        font = pygame.font.Font(None, 50)
-        text2 = font.render("Введите своё имя", True, "red")
+        font = pygame.font.SysFont('serif', 50)
+        text2 = font.render("Введите своё имя", True, "#EAEAB4")
         screen.blit(text2, (size[1] // 2, 200))
         text_surf = font.render(self.text, True, (255, 0, 0))
         screen.blit(text_surf, text_surf.get_rect(center=screen.get_rect().center))
@@ -481,7 +478,7 @@ def main():
             if board.is_playing and not pygame.sprite.collide_mask(ob, car):
                 ob.y += d * speed
                 ob.rect.y = int(ob.y)
-                if len(obstacle) < 3 and random.randint(l_d, l_r) == 1:
+                if len(obstacle) < 4 and random.randint(l_d, l_r) in range(10):
                     obstacle.append(Obstacle())
                     all_sprites.add(obstacle[-1])
                 if ob.y >= size[1]:
