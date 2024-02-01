@@ -32,9 +32,6 @@ def load_image(name, colorkey=None):
     return image
 
 
-
-
-
 class Button:
     def __init__(self, command=None, text=None, x=0, y=0, width=0, height=0, color="blue", color_text="red"):
         self.command = command
@@ -65,7 +62,7 @@ class Button:
 class Car(pygame.sprite.Sprite):
     def __init__(self, *grop, number=1):
         super().__init__(*grop)
-        self.image = pygame.transform.scale(load_image(f"car{number}.png", colorkey=-1), (100, 150))
+        self.image = pygame.transform.scale(load_image(f"car{number}.png", colorkey=-1), (90, 150))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.number_pos = random.randint(0, 4)
@@ -81,7 +78,8 @@ class Car(pygame.sprite.Sprite):
                 ob: Obstacle
                 if pygame.sprite.collide_mask(ob, car):
                     self.rect.x -= 100
-                    self.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (100, 150))
+                    self.image = pygame.transform.scale(load_image(f"crash_car{car.number}.png", colorkey=-1),
+                                                        (100, 150))
                     board.is_playing = False
         if self.rect.x - 120 > board.left and (event.key == 1073741904 or event.key == 97):
             self.rect.x -= 120
@@ -89,8 +87,31 @@ class Car(pygame.sprite.Sprite):
                 ob: Obstacle
                 if pygame.sprite.collide_mask(ob, car):
                     self.rect.x += 100
-                    self.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (100, 150))
+                    self.image = pygame.transform.scale(load_image(f"crash_car{car.number}.png", colorkey=-1),
+                                                        (100, 150))
                     board.is_playing = False
+
+    def pl_number(self):
+        if self.number < 2:
+            self.number += 1
+            self.image = pygame.transform.scale(load_image(f"car{self.number}.png", colorkey=-1), (90, 150))
+            return True
+        else:
+            return False
+
+    def mn_number(self):
+        if self.number > 1:
+            self.number -= 1
+            self.image = pygame.transform.scale(load_image(f"car{self.number}.png", colorkey=-1), (100, 150))
+            return True
+        else:
+            return False
+
+    def clear_im(self):
+        self.image = pygame.transform.scale(load_image(f"car{self.number}.png", colorkey=-1), (100, 150))
+        self.number_pos = random.randint(0, 4)
+        self.rect.x = 10 + board.left + self.number_pos * 120
+        self.rect.y = 425
 
 
 class Board:
@@ -102,7 +123,7 @@ class Board:
         self.ball = 0
         self.is_playing = True
         self.pos_y = -600
-        self.image = load_image('road.jpg')
+        self.image = pygame.transform.scale(load_image(f"road.jpg"), (600, 1200))
 
     def render(self, y=0):
         pygame.draw.rect(screen, "white", (0, 0, self.width, self.height))
@@ -140,7 +161,7 @@ car = Car()
 class Obstacle(pygame.sprite.Sprite):
     def __init__(self, *grop, pos=None):
         super().__init__(*grop)
-        self.image = pygame.transform.scale(load_image(f"ob{random.randint(0, 2)}.png", colorkey=-1), (100, 150))
+        self.image = pygame.transform.scale(load_image(f"ob{random.randint(0, 2)}.png", colorkey=-1), (90, 150))
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         fl = True
@@ -349,7 +370,7 @@ class Menu:
         # screen.blit(font.render("Пожаловать!", True, (255, 255, 255)), (size[1] // 2 + 150, 230))
         screen.blit(font2.render(str(self.username), True, "#a35713"), (750, 50))
         screen.blit(font2.render("Вы Вошли как:", True, "#a35713"), (750, 20))
-        fon = pygame.transform.scale(load_image('yel_car.png', colorkey=-1), (353, 200))
+        fon = pygame.transform.scale(load_image(f"men{car.number}.jpg", colorkey=-1), (353, 200))
         screen.blit(fon, (370, 385))
         for button in buttons:
             button.render()
@@ -401,8 +422,13 @@ menu = Menu()
 
 
 def start_game():
-    buttons = []
+    buttons = [
+        Button(color="grey", color_text="white", height=45, width=30, command=car.pl_number, text=">", y=450, x=720),
+    ]
     run = True
+    mn_btn = Button(color="grey", color_text="white", height=45, width=30, command=car.mn_number, text="<", y=450,
+                    x=300)
+    buttons.append(mn_btn)
     pygame.mixer.music.pause()
     button_out = Button(color="#a35713", color_text="white", x=750, y=100, height=100, width=30, command=table.sing_out,
                         text="Выход")
@@ -423,7 +449,6 @@ def start_game():
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 for button in buttons:
                     button.update(event)
-        screen.fill("purple")
         if menu.username is None:
             menu.sing_up()
         else:
@@ -434,11 +459,11 @@ def start_game():
 
 def main():
     pygame.mixer.music.load("data/pov.mp3")
-    global running, all_sprites, board, car
+    global running, all_sprites, board
     l_d = -3000  # рандомный диапазон создаем машинку когда randint == 2
     l_r = 3000
     board.is_playing = True
-    car = Car()
+    car.clear_im()
     tick = pygame.time.Clock()
     chet = pygame.USEREVENT + 1
     pygame.time.set_timer(chet, 2000)
@@ -491,7 +516,7 @@ def main():
                 board.render(d * speed)
                 pygame.mixer.music.pause()
                 font = pygame.font.Font(None, 50)
-                car.image = pygame.transform.scale(load_image("crash_car.png", colorkey=-1), (100, 150))
+                car.image = pygame.transform.scale(load_image(f"crash_car{car.number}.png", colorkey=-1), (100, 150))
                 all_sprites.draw(screen)
                 text = font.render(f"""Столкновение! Ваш счёт: {board.ball}, рекорд: {table.get_score()}""",
                                    True, "red")
