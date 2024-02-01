@@ -409,7 +409,7 @@ def start_game():
     buttons.append(button_out)
     start_btn = Button(color="#a35713", color_text="white", x=size[0] // 2 - 275, y=525, height=100, width=30,
                        command=main, text="Старт")
-    pokaz_btn = Button(color="#a35713", color_text="white", x=(size[1] // 2 + 200), y=190, height=150, width=60,
+    pokaz_btn = Button(color="#a35713", color_text="white", x=(size[1] // 2), y=190, height=150, width=60,
                        command=results_look, text="Доска Почета")
     buttons.append(start_btn)
     buttons.append(pokaz_btn)
