@@ -66,7 +66,7 @@ class Car(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.number_pos = random.randint(0, 4)
-        self.rect.x = 10 + board.left + self.number_pos * 120
+        self.rect.x = 10 + board.left + self.number_pos * 100
         self.rect.y = 425
         self.number = number
 
@@ -133,7 +133,7 @@ class Board:
             pygame.draw.line(screen, "white", (self.left + (120 * i), self.top),
                              (self.left + (120 * i), self.height - self.top), 2)
         self.pos_y += y
-        if int(self.pos_y) >= -600 + 165 * 3 - 2:
+        if int(self.pos_y) >= -600 + 175 * 3 - 2:
             self.pos_y = - 600
         screen.blit(self.image, (150, self.pos_y))
         all_sprites.draw(screen)
@@ -361,7 +361,7 @@ class Menu:
             self.sing = False
 
     def render(self, buttons):
-        fon = pygame.transform.scale(load_image('cars.jpg'), (900, 600))
+        fon = pygame.transform.scale(load_image('cars2.jpg'), (900, 600))
         screen.blit(fon, (0, 0))
         font = pygame.font.Font(None, 50)
         font2 = pygame.font.Font(None, 25)
