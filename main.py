@@ -133,7 +133,7 @@ class Board:
             pygame.draw.line(screen, "white", (self.left + (120 * i), self.top),
                              (self.left + (120 * i), self.height - self.top), 2)
         self.pos_y += y
-        if int(self.pos_y) >= -600 + 175 * 3 - 2:
+        if int(self.pos_y) >= -600 + 165 * 3 - 2:
             self.pos_y = - 600
         screen.blit(self.image, (150, self.pos_y))
         all_sprites.draw(screen)
@@ -152,6 +152,14 @@ class Board:
             self.ball += 1
         else:
             self.ball = 0
+
+    def gener(self, l_d, l_r):
+        if len(obstacle) == 0:
+            obstacle.append(Obstacle())
+            all_sprites.add(obstacle[-1])
+        if len(obstacle) < 3 and random.randint(l_d, l_r) == 1:
+            obstacle.append(Obstacle())
+            all_sprites.add(obstacle[-1])
 
 
 board = Board(size[0], size[1])
@@ -447,8 +455,9 @@ def start_game():
             elif event.type == pygame.KEYDOWN:
                 menu.updata(event)
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                for button in buttons:
-                    button.update(event)
+                if not (menu.username is None):
+                    for button in buttons:
+                        button.update(event)
         if menu.username is None:
             menu.sing_up()
         else:
@@ -506,9 +515,7 @@ def main():
             if board.is_playing and not pygame.sprite.collide_mask(ob, car):
                 ob.y += d * speed
                 ob.rect.y = int(ob.y)
-                if len(obstacle) < 3 and random.randint(l_d, l_r) == 1:
-                    obstacle.append(Obstacle())
-                    all_sprites.add(obstacle[-1])
+                board.gener(l_d, l_r)
                 if ob.y >= size[1]:
                     del obstacle[obstacle.index(ob)]
             else:
@@ -533,9 +540,7 @@ def main():
                 pygame.display.update()
                 wait()
                 return None
-        if len(obstacle) == 0:
-            obstacle.append(Obstacle())
-            all_sprites.add(obstacle[-1])
+        board.gener(l_d, l_r)
         board.render(d * (speed + 30))
         pygame.display.update()
     pygame.quit()
