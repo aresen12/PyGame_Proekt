@@ -1,4 +1,3 @@
-random
+python == 3.10
 PyGame == 2.5.2
-os
-sys
+

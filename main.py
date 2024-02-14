@@ -124,6 +124,8 @@ class Board:
         self.is_playing = True
         self.pos_y = -600
         self.image = pygame.transform.scale(load_image(f"road.jpg"), (600, 1200))
+        self.level = 0
+        self.speed = 100
 
     def render(self, y=0):
         pygame.draw.rect(screen, "white", (0, 0, self.width, self.height))
@@ -152,6 +154,12 @@ class Board:
             self.ball += 1
         else:
             self.ball = 0
+            self.left = 150
+            self.top = 0
+            self.ball = 0
+            self.is_playing = True
+            self.pos_y = -600
+            self.image = pygame.transform.scale(load_image(f"road.jpg"), (600, 1200))
 
     def gener(self, l_d, l_r):
         if len(obstacle) == 0:
@@ -161,6 +169,17 @@ class Board:
             obstacle.append(Obstacle())
             all_sprites.add(obstacle[-1])
 
+    def set_level(self, level=0):
+        self.speed = 100 + (level * 200)
+        self.level = level
+
+    def set_hard(self, level=2):
+        self.speed = 100 + (level * 200)
+        self.level = level
+
+    def set_midle(self, level=1):
+        self.speed = 100 + (level * 200)
+        self.level = level
 
 board = Board(size[0], size[1])
 car = Car()
@@ -310,12 +329,12 @@ class Table:
         bd.close()
 
     def sing_out(self):
-        global board, car, username, menu
+        global username, menu
         username = None
         self.username = None
         menu = Menu()
-        board = Board(size[0], size[1])
-        car = Car()
+        car.clear_im()
+        board.set_level(0)
         bd = sqlite3.connect("rating_system.db")
         curr = bd.cursor()
         curr.execute("""DELETE FROM user""")
@@ -382,7 +401,12 @@ class Menu:
         screen.blit(fon, (370, 385))
         for button in buttons:
             button.render()
-
+        if board.level == 0:
+            pygame.draw.circle(screen, 'green', (130, 40), 10)
+        elif board.level == 1:
+            pygame.draw.circle(screen, 'green', (130, 80), 10)
+        else:
+            pygame.draw.circle(screen, 'green', (130, 110), 10)
     def sing_up(self):
         screen.fill((228, 189, 114))
         fon = pygame.transform.scale(load_image('font.jpg'), (484, 600))
@@ -447,6 +471,15 @@ def start_game():
                        command=results_look, text="Доска Почета")
     buttons.append(start_btn)
     buttons.append(pokaz_btn)
+    midle_btn = Button(text="Средний", color="#a35713", color_text="white", command=board.set_midle, x=20, y=60,
+                       width=30, height=100)
+    hard_btn = Button(text="cложный", color="#a35713", color_text="white", command=board.set_hard, x=20, y=90,
+                      width=30, height=100)
+    lite_btn = Button(text="легкий", color="#a35713", color_text="white", command=board.set_level, x=20, y=30,
+                      width=30, height=100)
+    buttons.append(lite_btn)
+    buttons.append(midle_btn)
+    buttons.append(hard_btn)
     while run:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -478,12 +511,8 @@ def main():
     pygame.time.set_timer(chet, 2000)
     screen.fill("black")
     all_sprites.add(car)
-    for ob in range(3):
-        obstacle.append(Obstacle(pos=-1))
-        all_sprites.add(obstacle[-1])
     all_sprites.draw(screen)
     running = True
-    speed = 100
     pygame.mixer.music.play(-1)
     while running:
         for event in pygame.event.get():
@@ -494,7 +523,7 @@ def main():
             if event.type == chet:
                 board.set_ball()
                 if board.ball % 3 == 0:
-                    speed = speed + 30
+                    board.speed = board.speed + 30
                     if l_d > -200:
                         l_d += 200
                     if l_r < 200:
@@ -506,21 +535,21 @@ def main():
                 if 800 <= event.pos[0] <= 890 and 100 <= event.pos[1] <= 130:
                     obstacle.clear()
                     all_sprites = pygame.sprite.Group()
-                    board = Board(size[0], size[1])
+                    board.set_ball(clear=-1)
                     start_game()
                     return None
         d = tick.tick() / 1000
         for ob in obstacle:
             ob: Obstacle
             if board.is_playing and not pygame.sprite.collide_mask(ob, car):
-                ob.y += d * speed
+                ob.y += d * board.speed
                 ob.rect.y = int(ob.y)
                 board.gener(l_d, l_r)
                 if ob.y >= size[1]:
                     del obstacle[obstacle.index(ob)]
             else:
                 board.is_playing = False
-                board.render(d * speed)
+                board.render(d * board.speed)
                 pygame.mixer.music.pause()
                 font = pygame.font.Font(None, 50)
                 car.image = pygame.transform.scale(load_image(f"crash_car{car.number}.png", colorkey=-1), (100, 150))
@@ -541,7 +570,7 @@ def main():
                 wait()
                 return None
         board.gener(l_d, l_r)
-        board.render(d * (speed + 30))
+        board.render(d * (board.speed + 30))
         pygame.display.update()
     pygame.quit()
 
