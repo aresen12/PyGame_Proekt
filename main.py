@@ -14,6 +14,8 @@ vertical_borders = pygame.sprite.Group()
 running = True
 pygame.display.set_caption(title="Машинки")
 pygame.mixer.music.load("data/pov.mp3")
+tg = 0.1 * size[1] / (0.2 * size[0])
+print(tg)
 
 
 def load_image(name, colorkey=None):
@@ -33,7 +35,8 @@ def load_image(name, colorkey=None):
 
 
 class Button:
-    def __init__(self, command=None, text=None, x=0, y=0, width=0, height=0, color="blue", color_text="red"):
+    def __init__(self, command=None, text=None, x=0, y=0, color_key=None, width=0, height=0, color="blue",
+                 color_text="red", img=None):
         self.command = command
         self.text = text
         self.y = y
@@ -42,12 +45,22 @@ class Button:
         self.height = height
         self.color = color
         self.color_text = color_text
+        if img:
+            try:
+                self.img = pygame.transform.scale(load_image(img, colorkey=color_key), (height, width))
+            except FileNotFoundError:
+                print("файл не найден!")
+        else:
+            self.img = None
 
     def render(self):
-        rect = pygame.draw.rect(screen, self.color, (self.x, self.y, self.height, self.width))
-        font = pygame.font.Font(None, 25)
-        text = font.render(str(self.text), True, self.color_text)
-        screen.blit(text, text.get_rect(center=rect.center))
+        if self.img:
+            screen.blit(self.img, (self.x, self.y))
+        else:
+            rect = pygame.draw.rect(screen, self.color, (self.x, self.y, self.height, self.width))
+            font = pygame.font.Font(None, 25)
+            text = font.render(str(self.text), True, self.color_text)
+            screen.blit(text, text.get_rect(center=rect.center))
 
     def update(self, event):
         if self.y <= event.pos[1] <= self.y + self.width and self.x <= event.pos[0] <= self.x + self.height:
@@ -62,7 +75,10 @@ class Button:
 class Car(pygame.sprite.Sprite):
     def __init__(self, *grop, number=1):
         super().__init__(*grop)
-        self.image = pygame.transform.scale(load_image(f"car{number}.png", colorkey=-1), (90, 150))
+        if board.three_d:
+            self.image = pygame.transform.scale(load_image(f"car{number}_3d.jpg", colorkey=-1), (100, 100))
+        else:
+            self.image = pygame.transform.scale(load_image(f"car{number}.png", colorkey=-1), (90, 150))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.number_pos = random.randint(0, 4)
@@ -99,6 +115,12 @@ class Car(pygame.sprite.Sprite):
         else:
             return False
 
+    def set_three_d(self):
+        if not board.three_d:
+            self.image = pygame.transform.scale(load_image(f"car{self.number}.png", colorkey=-1), (90, 150))
+        else:
+            self.image = pygame.transform.scale(load_image(f"car{self.number}_3d.jpg", colorkey=-1), (90, 150))
+
     def mn_number(self):
         if self.number > 1:
             self.number -= 1
@@ -108,14 +130,17 @@ class Car(pygame.sprite.Sprite):
             return False
 
     def clear_im(self):
-        self.image = pygame.transform.scale(load_image(f"car{self.number}.png", colorkey=-1), (100, 150))
+        if board.three_d:
+            self.image = pygame.transform.scale(load_image(f"car{self.number}_3d.jpg", colorkey=-1), (100, 100))
+        else:
+            self.image = pygame.transform.scale(load_image(f"car{self.number}.png", colorkey=-1), (100, 150))
         self.number_pos = random.randint(0, 4)
         self.rect.x = 10 + board.left + self.number_pos * 120
         self.rect.y = 425
 
 
 class Board:
-    def __init__(self, width, height):
+    def __init__(self, width, height, three_d=None):
         self.width = width
         self.height = height
         self.left = 150
@@ -126,9 +151,18 @@ class Board:
         self.image = pygame.transform.scale(load_image(f"road.jpg"), (600, 1200))
         self.level = 0
         self.speed = 100
+        self.three_d = True
+
+
+    def set_stereo(self):
+        if self.three_d:
+            self.three_d = False
+        else:
+            self.three_d = True
+        car.set_three_d()
 
     def render(self, y=0):
-        pygame.draw.rect(screen, "white", (0, 0, self.width, self.height))
+        pygame.draw.rect(screen, "#004d00", (0, 0, self.width, self.height))
         pygame.draw.rect(screen, (128, 128, 128),
                          (self.left, self.top, self.width - self.left * 2, self.height - self.top * 2))
         for i in range(1, 6):
@@ -141,6 +175,22 @@ class Board:
         all_sprites.draw(screen)
         font = pygame.font.Font(None, 20)
         pygame.draw.rect(screen, "blue", (800, 100, 90, 30))
+        screen.blit(font.render("Меню", True, "red"), (810, 110))
+        text = font.render(f"""Ваш счёт:{board.ball}""", True, "red")
+        screen.blit(text, (800, 30))
+
+    def three_d_render(self, y=0):
+        font = pygame.font.Font(None, 20)
+        pygame.draw.rect(screen, "#004d00", (0, 0, self.width, self.height))
+
+        pygame.draw.polygon(screen, (128, 128, 128),
+                            [(int(0.1 * self.width), self.height), (int(0.3 * self.width), int(0.4 * self.height)),
+                             (int(0.7 * self.width), int(0.4 * self.height)), (int(0.9 * self.width), self.height)])
+
+        all_sprites.draw(screen)
+
+        pygame.draw.rect(screen, "#38aecc", (0, 0, self.width, int(self.height * 0.4)))
+
         screen.blit(font.render("Меню", True, "red"), (810, 110))
         text = font.render(f"""Ваш счёт:{board.ball}""", True, "red")
         screen.blit(text, (800, 30))
@@ -181,6 +231,7 @@ class Board:
         self.speed = 100 + (level * 200)
         self.level = level
 
+
 board = Board(size[0], size[1])
 car = Car()
 
@@ -188,24 +239,83 @@ car = Car()
 class Obstacle(pygame.sprite.Sprite):
     def __init__(self, *grop, pos=None):
         super().__init__(*grop)
-        self.image = pygame.transform.scale(load_image(f"ob{random.randint(0, 2)}.png", colorkey=-1), (90, 150))
+        self.width_k_height = 150 / 90
+        self.number = random.randint(0, 2)
+        if board.three_d:
+            self.st_width = random.randint(5, 10)
+            self.image = pygame.transform.scale(load_image(f"ob{self.number}_3d.png", colorkey=-1),
+                                                (self.st_width, self.st_width * self.width_k_height))
+        else:
+            self.image = pygame.transform.scale(load_image(f"ob{self.number}.png", colorkey=-1),
+                                                (90, 150))
+            self.st_width = 40
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         fl = True
-        while fl:
-            fl = False
-            self.rect.x = 10 + board.left + random.randint(0, 4) * 120
-            if pos is None:
-                self.rect.y = random.randint(-200, -100)
-            else:
-                self.rect.y = random.randint(40, size[1] - 100)
-            self.y = self.rect.y
-            for i in all_sprites:
-                if pygame.sprite.collide_mask(i, self):
-                    fl = True
+        if not board.three_d:
+            while fl:
+                fl = False
+                self.rect.x = 10 + board.left + random.randint(0, 4) * 120
+                self.x = self.rect.x
+                if pos is None:
+                    self.rect.y = random.randint(-250, -150)
+                else:
+                    self.rect.y = random.randint(40, size[1] - 100)
+                self.y = self.rect.y
+                for i in all_sprites:
+                    if pygame.sprite.collide_mask(i, self):
+                        fl = True
+        else:
+            while fl:
+                fl = False
+                self.rect.x = 10 + board.left + random.randint(0, 4) * 120
+                self.x = self.rect.x
+                self.rect.y = int(board.height * 0.4)
+                self.y = self.rect.y
+                for i in all_sprites:
+                    if pygame.sprite.collide_mask(i, self):
+                        fl = True
 
-    def update(self):
-        pass
+    def update(self, l_d, l_r, d):
+        if board.is_playing and not pygame.sprite.collide_mask(self, car):
+            if not board.three_d:
+                self.y += d * board.speed
+                self.rect.y = int(self.y)
+            else:
+                self.y += d * board.speed
+                if self.rect.y < int(board.height * 0.4):
+                    self.rect.y = int(board.height * 0.4)
+                    self.y = self.rect.y
+                if self.y - self.rect.y < 1:
+                    return True
+                self.st_width += 2 * (self.y - self.rect.y) * tg
+                self.rect.y = int(self.y)
+                if 90 > self.st_width:
+                    print(int(self.st_width), int(self.st_width * self.width_k_height))
+                    self.image = pygame.transform.scale(load_image(f"ob{self.number}_3d.png", colorkey=-1),
+                                                        (abs(int(self.st_width)),
+                                                         abs(int(self.st_width * self.width_k_height))))
+                elif self.st_width > 45:
+                    if self.st_width < 100:
+                        self.image = pygame.transform.scale(load_image(f"ob{self.number}_3d.png", colorkey=-1),
+                                                        (abs(int(self.st_width)),
+                                                         abs(int(self.st_width * self.width_k_height))))
+                # else:
+                #     self.rect.y = int(self.y)
+                #     self.st_width += d * board.speed / 100
+                #     self.image = pygame.transform.scale(load_image(f"ob{self.number}.png", colorkey=-1),
+                #                                         (abs(int(self.st_width)), abs(int(self.st_width * self.width_k_height))))
+                self.rect = self.image.get_rect()
+                self.mask = pygame.mask.from_surface(self.image)
+                self.rect.x = self.x
+                if self.st_width > 20:
+                    self.rect.y = int(self.y)
+                all_sprites.draw(screen)
+            board.gener(l_d, l_r)
+            if self.y >= size[1]:
+                del obstacle[obstacle.index(self)]
+            return True
+        return False
 
 
 menu_flag = False
@@ -407,6 +517,7 @@ class Menu:
             pygame.draw.circle(screen, 'green', (130, 80), 10)
         else:
             pygame.draw.circle(screen, 'green', (130, 110), 10)
+
     def sing_up(self):
         screen.fill((228, 189, 114))
         fon = pygame.transform.scale(load_image('font.jpg'), (484, 600))
@@ -509,11 +620,12 @@ def main():
     tick = pygame.time.Clock()
     chet = pygame.USEREVENT + 1
     pygame.time.set_timer(chet, 2000)
-    screen.fill("black")
     all_sprites.add(car)
     all_sprites.draw(screen)
     running = True
     pygame.mixer.music.play(-1)
+    button = [
+        Button(img="camera.png", text="", x=10, y=10, width=40, height=30, command=board.set_stereo, color_key=-1)]
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -532,6 +644,8 @@ def main():
                     pygame.mixer.music.load("data/Super_bal.MP3")
                     pygame.mixer.music.play(-1)
             if event.type == pygame.MOUSEBUTTONDOWN:
+                for i in button:
+                    i.update(event)
                 if 800 <= event.pos[0] <= 890 and 100 <= event.pos[1] <= 130:
                     obstacle.clear()
                     all_sprites = pygame.sprite.Group()
@@ -541,15 +655,12 @@ def main():
         d = tick.tick() / 1000
         for ob in obstacle:
             ob: Obstacle
-            if board.is_playing and not pygame.sprite.collide_mask(ob, car):
-                ob.y += d * board.speed
-                ob.rect.y = int(ob.y)
-                board.gener(l_d, l_r)
-                if ob.y >= size[1]:
-                    del obstacle[obstacle.index(ob)]
-            else:
+            if not ob.update(l_d, l_r, d):
                 board.is_playing = False
-                board.render(d * board.speed)
+                if board.three_d:
+                    board.three_d_render(d * board.speed)
+                else:
+                    board.render(d * board.speed)
                 pygame.mixer.music.pause()
                 font = pygame.font.Font(None, 50)
                 car.image = pygame.transform.scale(load_image(f"crash_car{car.number}.png", colorkey=-1), (100, 150))
@@ -570,7 +681,12 @@ def main():
                 wait()
                 return None
         board.gener(l_d, l_r)
-        board.render(d * (board.speed + 30))
+        if board.three_d:
+            board.three_d_render(d * (int(board.speed * 1.3)))
+        else:
+            board.render(d * (int(board.speed * 1.3)))
+        for b in button:
+            b.render()
         pygame.display.update()
     pygame.quit()
 
