@@ -6,9 +6,7 @@ import sqlite3
 
 size = 900, 600
 pygame.init()
-print(pygame.display.Info().current_w)
 size = pygame.display.Info().current_w, pygame.display.Info().current_h
-print(size)
 screen = pygame.display.set_mode(size)
 all_sprites = pygame.sprite.Group()
 obstacle = []
@@ -18,7 +16,6 @@ running = True
 pygame.display.set_caption(title="Машинки")
 pygame.mixer.music.load("data/pov.mp3")
 tg = 0.1 * size[1] / (0.2 * size[0])
-print(tg)
 
 
 def load_image(name, colorkey=None):
@@ -38,7 +35,7 @@ def load_image(name, colorkey=None):
 
 
 class Button:
-    def __init__(self, command=None, text=None, x=0, y=0, color_key=None, width=0, height=0, color="blue",
+    def __init__(self, command=None, text=None, x=0, y=0, color_key=None, width=30, height=100, color="blue",
                  color_text="red", img=None):
         self.command = command
         self.text = text
@@ -48,6 +45,7 @@ class Button:
         self.height = height
         self.color = color
         self.color_text = color_text
+        self.font = pygame.font.Font(None, 25)
         if img:
             try:
                 self.img = pygame.transform.scale(load_image(img, colorkey=color_key), (height, width))
@@ -61,8 +59,7 @@ class Button:
             screen.blit(self.img, (self.x, self.y))
         else:
             rect = pygame.draw.rect(screen, self.color, (self.x, self.y, self.height, self.width))
-            font = pygame.font.Font(None, 25)
-            text = font.render(str(self.text), True, self.color_text)
+            text = self.font.render(str(self.text), True, self.color_text)
             screen.blit(text, text.get_rect(center=rect.center))
 
     def update(self, event):
@@ -86,7 +83,7 @@ class Car(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.number_pos = random.randint(0, 4)
         self.rect.x = 10 + board.left + self.number_pos * 100
-        self.rect.y = size[1] * 0.8
+        self.rect.y = size[1] - 300
         self.number = number
 
     def update(self, event: pygame.event.Event):
@@ -139,27 +136,33 @@ class Car(pygame.sprite.Sprite):
             self.image = pygame.transform.scale(load_image(f"car{self.number}.png", colorkey=-1), (100, 150))
         self.number_pos = random.randint(0, 4)
         self.rect.x = 10 + board.left + self.number_pos * 120
-        self.rect.y = size[1] * 0.8
+        self.rect.y = size[1] - 200
 
 
 class Board:
-    def __init__(self, width, height, three_d=None):
+    def __init__(self, width, height, three_d=True):
+        self.block = 60  # высота разметки
         self.width = width
         self.height = height
         self.left = 150
         self.top = 0
         self.ball = 0
         self.is_playing = True
-        self.pos_y = -600
-        self.image = pygame.transform.scale(load_image(f"road.jpg"), (600, 1200))
+        self.pos_y = -self.block * 2
         self.level = 0
         self.speed = 100
-        self.three_d = True
+        self.three_d = three_d
+        self.font = pygame.font.Font(None, 20)
+        self.st_pos = -self.block * 2
 
     def set_stereo(self):
         if self.three_d:
             self.three_d = False
+            if size[0] > 900:
+                self.left = (size[0] - 600) // 2
         else:
+            if self.left != 150:
+                self.left = 150
             self.three_d = True
         car.set_three_d()
 
@@ -167,22 +170,20 @@ class Board:
         pygame.draw.rect(screen, "#004d00", (0, 0, self.width, self.height))
         pygame.draw.rect(screen, (128, 128, 128),
                          (self.left, self.top, self.width - self.left * 2, self.height - self.top * 2))
-        for i in range(1, 6):
-            pygame.draw.line(screen, "white", (self.left + (120 * i), self.top),
-                             (self.left + (120 * i), self.height - self.top), 2)
+        for i in range(1, 5):
+            for j in range(0, size[1] // self.block + 2, 2):
+                pygame.draw.rect(screen, "white", (self.left + (120 * i), self.pos_y + self.block * j, 10, self.block))
         self.pos_y += y
-        if int(self.pos_y) >= -600 + 165 * 3 - 2:
-            self.pos_y = - 600
-        screen.blit(self.image, (150, self.pos_y))
+        if int(self.pos_y) - int(self.st_pos) >= self.block * 2:
+            self.pos_y -= self.block * 2
+            self.st_pos = self.pos_y
         all_sprites.draw(screen)
-        font = pygame.font.Font(None, 20)
-        pygame.draw.rect(screen, "blue", (size[0]*0.9, 100, 90, 30))
-        screen.blit(font.render("Меню", True, "red"), (size[0]*0.9, 110))
-        text = font.render(f"""Ваш счёт:{board.ball}""", True, "red")
-        screen.blit(text, (size[0]*0.9, 30))
+        pygame.draw.rect(screen, "blue", (size[0] * 0.9, 100, 90, 30))
+        screen.blit(self.font.render("Меню", True, "red"), (size[0] * 0.9, 110))
+        text = self.font.render(f"""Ваш счёт:{board.ball}""", True, "red")
+        screen.blit(text, (size[0] * 0.9, 30))
 
     def three_d_render(self, y=0):
-        font = pygame.font.Font(None, 20)
         pygame.draw.rect(screen, "#004d00", (0, 0, self.width, self.height))
         pygame.draw.polygon(screen, (128, 128, 128),
                             [(int(0.1 * self.width), self.height), (int(0.3 * self.width), int(0.4 * self.height)),
@@ -191,12 +192,12 @@ class Board:
         all_sprites.draw(screen)
         pygame.draw.rect(screen, "#38aecc", (0, 0, self.width, int(self.height * 0.4)))
         for i in range(6):
-            pygame.draw.line(screen, "white",(board.width*0.3 + 0.4 / 5 * board.width * i, board.height * 0.4), (board.width*0.1 + board.width * 0.8 / 5 * i, board.height), 2 )
+            pygame.draw.line(screen, "white", (board.width * 0.3 + 0.4 / 5 * board.width * i, board.height * 0.4),
+                             (board.width * 0.1 + board.width * 0.8 / 5 * i, board.height), 2)
         pygame.draw.rect(screen, "blue", (size[0] * 0.9, 100, 90, 30))
-        screen.blit(font.render("Меню", True, "red"), (size[0] * 0.9, 110))
-        text = font.render(f"""Ваш счёт: {board.ball}""", True, "red")
+        screen.blit(self.font.render("Меню", True, "red"), (size[0] * 0.9, 110))
+        text = self.font.render(f"""Ваш счёт: {board.ball}""", True, "red")
         screen.blit(text, (size[0] * 0.9, 30))
-        print(size)
 
     def set_left_top(self, left, top):
         self.top = top
@@ -207,12 +208,8 @@ class Board:
             self.ball += 1
         else:
             self.ball = 0
-            self.left = 150
-            self.top = 0
-            self.ball = 0
             self.is_playing = True
-            self.pos_y = -600
-            self.image = pygame.transform.scale(load_image(f"road.jpg"), (600, 1200))
+            self.pos_y = -(size[1])
 
     def gener(self, l_d, l_r):
         if len(obstacle) == 0:
@@ -249,8 +246,7 @@ class Obstacle(pygame.sprite.Sprite):
             self.image = pygame.transform.scale(load_image(f"ob{self.number}_3d.png", colorkey=-1),
                                                 (self.st_width, self.st_width * self.width_k_height))
         else:
-            self.image = pygame.transform.scale(load_image(f"ob{self.number}.png", colorkey=-1),
-                                                (90, 150))
+            self.image = pygame.transform.scale(load_image(f"ob{self.number}.png", colorkey=-1), (90, 150))
             self.st_width = 40
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
@@ -271,7 +267,7 @@ class Obstacle(pygame.sprite.Sprite):
         else:
             while fl:
                 fl = False
-                self.rect.x = 10 + board.left + random.randint(0, 4) * 120
+                self.rect.x = 10 + (size[0] * 0.3) + random.randint(0, 4) * (0.4 * size[0])
                 self.x = self.rect.x
                 self.rect.y = int(board.height * 0.4)
                 self.y = self.rect.y
@@ -280,6 +276,8 @@ class Obstacle(pygame.sprite.Sprite):
                         fl = True
 
     def update(self, l_d, l_r, d):
+        self.mask = pygame.mask.from_surface(self.image)
+        car.mask = pygame.mask.from_surface(car.image)
         if board.is_playing and not pygame.sprite.collide_mask(self, car):
             if not board.three_d:
                 self.y += d * board.speed
@@ -293,23 +291,11 @@ class Obstacle(pygame.sprite.Sprite):
                     return True
                 self.st_width += 2 * (self.y - self.rect.y) * tg
                 self.rect.y = int(self.y)
-                if 90 > self.st_width:
-                    print(int(self.st_width), int(self.st_width * self.width_k_height))
+                if 100 > self.st_width:
                     self.image = pygame.transform.scale(load_image(f"ob{self.number}_3d.png", colorkey=-1),
                                                         (abs(int(self.st_width)),
                                                          abs(int(self.st_width * self.width_k_height))))
-                elif self.st_width > 45:
-                    if self.st_width < 100:
-                        self.image = pygame.transform.scale(load_image(f"ob{self.number}_3d.png", colorkey=-1),
-                                                        (abs(int(self.st_width)),
-                                                         abs(int(self.st_width * self.width_k_height))))
-                # else:
-                #     self.rect.y = int(self.y)
-                #     self.st_width += d * board.speed / 100
-                #     self.image = pygame.transform.scale(load_image(f"ob{self.number}.png", colorkey=-1),
-                #                                         (abs(int(self.st_width)), abs(int(self.st_width * self.width_k_height))))
-                self.rect = self.image.get_rect()
-                self.mask = pygame.mask.from_surface(self.image)
+                    self.mask = pygame.mask.from_surface(self.image)
                 self.rect.x = self.x
                 if self.st_width > 25:
                     self.rect.y = int(self.y)
@@ -388,6 +374,16 @@ class Table:
         result INTEGER
         )
         ''')
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS users (
+    id               INTEGER NOT NULL
+                     CONSTRAINT genres_pk PRIMARY KEY AUTOINCREMENT
+                     UNIQUE
+                     NOT NULL,
+    username TEXT    NOT NULL,
+    password TEXT    NOT NULL
+);
+
+''')
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS user (
     id    INTEGER NOT NULL
                   CONSTRAINT genres_pk PRIMARY KEY AUTOINCREMENT,
@@ -402,7 +398,6 @@ class Table:
         self.cursor = self.connection.cursor()
         results = self.cursor.execute(f'SELECT result FROM Results WHERE username = "{self.username}"').fetchone()
         self.ball = board.ball
-        print(results)
         if results is None:
             self.cursor.execute('INSERT INTO Results (username, result) VALUES (?, ?)', (self.username,
                                                                                          self.ball))
@@ -434,12 +429,31 @@ class Table:
             return None
 
     def sistem(self):
+        if self.check_username() and self.check_password(menu.password):
+            bd = sqlite3.connect("rating_system.db")
+            curr = bd.cursor()
+            curr.execute("""DELETE FROM user""")
+            curr.execute(f'''INSERT INTO user (id, username) VALUES (1, '{self.username}')''', )
+            bd.commit()
+            bd.close()
+            menu.sing = False
+            menu.username = self.username
+            return "успешная авторизация"
+        elif self.check_username():
+            return "неверный пароль"
+        if menu.password == "":
+            return "uni"
+        else:
+            return "create new user"
+
+    def create_user(self):
         bd = sqlite3.connect("rating_system.db")
         curr = bd.cursor()
-        curr.execute("""DELETE FROM user""")
-        curr.execute(f'''INSERT INTO user (id, username) VALUES (1, '{self.username}')''', )
+        curr.execute(f'''INSERT INTO users (username, password) VALUES ( '{self.username}', '{menu.password}')''', )
         bd.commit()
         bd.close()
+        self.sistem()
+        menu.sing = False
 
     def sing_out(self):
         global username, menu
@@ -460,6 +474,31 @@ class Table:
         res = self.cursor.execute("SELECT * FROM results").fetchall()
         self.connection.close()
         return res
+
+    def check_password(self, password):
+        self.connection = sqlite3.connect("rating_system.db")
+        self.cursor = self.connection.cursor()
+
+        res = self.cursor.execute(f"""SELECT password FROM users
+                                  WHERE username = '{self.username}'""").fetchone()
+        self.connection.close()
+        if res[0] == self.set_password(password):
+            return True
+        return False
+
+    def check_username(self):
+        self.connection = sqlite3.connect("rating_system.db")
+        self.cursor = self.connection.cursor()
+
+        res = self.cursor.execute(f"""SELECT * FROM users
+                                  WHERE username = '{self.username}'""").fetchone()
+        self.connection.close()
+        if res is None:
+            return False
+        return True
+
+    def set_password(self, password):
+        return password
 
 
 table = Table(None, board.ball)
@@ -495,8 +534,10 @@ class Menu:
     def __init__(self):
         self.username = table.username
         self.text = ""
+        self.password = ""
         if self.username is None:
             self.sing = True
+            self.password2 = False
         else:
             self.sing = False
 
@@ -511,7 +552,7 @@ class Menu:
         screen.blit(font2.render(str(self.username), True, "#a35713"), (0.9 * size[0], 50))
         screen.blit(font2.render("Вы Вошли как:", True, "#a35713"), (0.9 * size[0], 20))
         fon = pygame.transform.scale(load_image(f"men{car.number}.jpg", colorkey=-1), (353, 200))
-        screen.blit(fon, (size[0]* 0.45, size[1] * 0.7))
+        screen.blit(fon, (size[0] * 0.45, size[1] * 0.7))
         for button in buttons:
             button.render()
         if board.level == 0:
@@ -532,20 +573,44 @@ class Menu:
         text_surf = font.render(self.text, True, (255, 0, 0))
         screen.blit(text_surf, text_surf.get_rect(center=screen.get_rect().center))
 
+    def write_password(self, text="", buttons=list()):
+        screen.fill((228, 189, 114))
+        k = 484 / 600
+        fon = pygame.transform.scale(load_image('font.jpg'), (k * size[1], size[1]))
+        screen.blit(fon, (size[0] * 0.25, 0))
+        font = pygame.font.Font(None, 50)
+        text2 = font.render("Введите пароль", True, "red")
+        screen.blit(text2, (size[0] * 0.5, 200))
+        screen.blit(font.render(text, True, "red"), (size[0] * 0.5, size[1] * 0.8))
+        text_surf = font.render(self.password, True, (255, 0, 0))
+        screen.blit(text_surf, text_surf.get_rect(center=screen.get_rect().center))
+        if text != '':
+            for but in buttons:
+                but.render()
+
     def updata(self, event):
         if self.sing:
             if event.key == pygame.K_RETURN and self.text.strip() != "":
                 global username
                 self.text = self.text.strip()
-                self.username = self.text
+                # self.username = self.text
                 table.username = self.text
-                username = self.username
-                self.sing = False
-                table.sistem()
+                # username = self.username
+                # self.sing =
+                self.password2 = True
+                return table.sistem()
             elif event.key == pygame.K_BACKSPACE:
-                self.text = self.text[:-1]
+                if self.password2:
+                    self.password = self.password[:-1]
+                else:
+                    self.text = self.text[:-1]
+                return "uni"
             elif event.unicode != "":
-                self.text += event.unicode
+                if self.password2:
+                    self.password += event.unicode
+                else:
+                    self.text += event.unicode
+                return "uni"
         else:
             main()
 
@@ -569,6 +634,8 @@ menu = Menu()
 
 
 def start_game():
+    y_n = [Button(text="yes", y=size[1] * 0.7, command=table.create_user, x=size[0] * 0.5),
+           Button(text="no", command=table.sing_out, y=size[1] * 0.7, x=size[0] * 0.6)]
     buttons = [
         Button(color="grey", color_text="white", height=45, width=30, command=car.pl_number, text=">", y=450, x=720),
     ]
@@ -577,10 +644,11 @@ def start_game():
                     x=300)
     buttons.append(mn_btn)
     pygame.mixer.music.pause()
-    button_out = Button(color="#a35713", color_text="white", x=0.9 * size[0], y=100, height=100, width=30, command=table.sing_out,
+    button_out = Button(color="#a35713", color_text="white", x=0.9 * size[0], y=100, height=100, width=30,
+                        command=table.sing_out,
                         text="Выход")
     buttons.append(button_out)
-    start_btn = Button(color="#a35713", color_text="white", x=size[0] * 0.3, y=size[1]* 0.7, height=100, width=30,
+    start_btn = Button(color="#a35713", color_text="white", x=size[0] * 0.3, y=size[1] * 0.7, height=100, width=30,
                        command=main, text="Старт")
     pokaz_btn = Button(color="#a35713", color_text="white", x=(size[1] // 2), y=190, height=150, width=60,
                        command=results_look, text="Доска Почета")
@@ -595,19 +663,29 @@ def start_game():
     buttons.append(lite_btn)
     buttons.append(midle_btn)
     buttons.append(hard_btn)
+    text = ''
     while run:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
-                menu.updata(event)
+                fl = menu.updata(event)
+                print(fl)
+                if fl == "create new user":
+                    text = "create new user?"
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if not (menu.username is None):
                     for button in buttons:
                         button.update(event)
+                for b in y_n:
+                    b.update(event)
+
         if menu.username is None:
-            menu.sing_up()
+            if not menu.password2:
+                menu.sing_up()
+            else:
+                menu.write_password(text, y_n)
         else:
             menu.render(buttons)
         pygame.display.update()
@@ -650,7 +728,7 @@ def main():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 for i in button:
                     i.update(event)
-                if 800 <= event.pos[0] <= 890 and 100 <= event.pos[1] <= 130:
+                if size[0] * 0.9 <= event.pos[0] <= size[0] * 0.9 + 90 and 100 <= event.pos[1] <= 130:
                     obstacle.clear()
                     all_sprites = pygame.sprite.Group()
                     board.set_ball(clear=-1)
