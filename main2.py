@@ -515,7 +515,8 @@ def results_look():
     global watching
     watching = True
     buttons = []
-    close_btn = Button(color_text="white", color="#a35713", x=800, y=100, text="Закрыть", width=30, height=100,
+    close_btn = Button(color_text="white", color="red", x=int(size[0] - 150), y=100, text="Закрыть", width=30,
+                       height=100,
                        command=close_wind)
     buttons.append(close_btn)
     while watching:
@@ -544,11 +545,7 @@ class Menu:
     def render(self, buttons):
         fon = pygame.transform.scale(load_image('cars2.jpg'), (size[0], size[1]))
         screen.blit(fon, (0, 0))
-        font = pygame.font.Font(None, 50)
         font2 = pygame.font.Font(None, 25)
-        # text = font.render("Добро", True, (255, 255, 255))
-        # screen.blit(text, ((size[1] // 2) + 200, 190))
-        # screen.blit(font.render("Пожаловать!", True, (255, 255, 255)), (size[1] // 2 + 150, 230))
         screen.blit(font2.render(str(self.username), True, "#a35713"), (0.9 * size[0], 50))
         screen.blit(font2.render("Вы Вошли как:", True, "#a35713"), (0.9 * size[0], 20))
         fon = pygame.transform.scale(load_image(f"men{car.number}.jpg", colorkey=-1), (353, 200))
@@ -593,10 +590,7 @@ class Menu:
             if event.key == pygame.K_RETURN and self.text.strip() != "":
                 global username
                 self.text = self.text.strip()
-                # self.username = self.text
                 table.username = self.text
-                # username = self.username
-                # self.sing =
                 self.password2 = True
                 return table.sistem()
             elif event.key == pygame.K_BACKSPACE:
@@ -611,13 +605,16 @@ class Menu:
                 else:
                     self.text += event.unicode
                 return "uni"
-        else:
-            main()
 
     def watching_results(self):
-        fon = pygame.transform.scale(load_image('board.png'), (size[0], size[1]))
+        fon = pygame.transform.scale(load_image('cars2.jpg'), (size[0], size[1]))
         screen.blit(fon, (0, 0))
+        pygame.draw.rect(screen, "#f48932", (30, 30, size[0] - 60, size[1] - 60))
+        pygame.draw.rect(screen, "#a35713", (50, 50, size[0] - 100, size[1] - 100))
         font2 = pygame.font.Font(None, 20)
+        font = pygame.font.Font(None, 50)
+        screen.blit(font.render(f"Доска почёта", True, "white"),
+                    (size[0] * 0.5, 100))
         res = table.get_results()
         if not (res is None):
             height = 230
@@ -634,21 +631,24 @@ menu = Menu()
 
 
 def start_game():
-    y_n = [Button(text="yes", y=size[1] * 0.7, command=table.create_user, x=size[0] * 0.5),
-           Button(text="no", command=table.sing_out, y=size[1] * 0.7, x=size[0] * 0.6)]
+    y_n = [Button(text="yes", y=int(size[1] * 0.7), command=table.create_user, x=int(size[0] * 0.5)),
+           Button(text="no", command=table.sing_out, y=int(size[1] * 0.7), x=int(size[0] * 0.6))]
     buttons = [
-        Button(color="grey", color_text="white", height=45, width=30, command=car.pl_number, text=">", y=450, x=720),
+        Button(color="grey", color_text="white", height=45, width=30, command=car.pl_number, text=">",
+               y=int(0.8 * size[1]), x=int(size[0] * 0.7) + 70),
     ]
     run = True
-    mn_btn = Button(color="grey", color_text="white", height=45, width=30, command=car.mn_number, text="<", y=450,
-                    x=300)
+    mn_btn = Button(color="grey", color_text="white", height=45, width=30, command=car.mn_number, text="<",
+                    y=int(0.8 * size[1]),
+                    x=int(size[0] * 0.7) - 400)
     buttons.append(mn_btn)
     pygame.mixer.music.pause()
-    button_out = Button(color="#a35713", color_text="white", x=0.9 * size[0], y=100, height=100, width=30,
+    button_out = Button(color="#a35713", color_text="white", x=int(0.9 * size[0]), y=100, height=100, width=30,
                         command=table.sing_out,
                         text="Выход")
     buttons.append(button_out)
-    start_btn = Button(color="#a35713", color_text="white", x=size[0] * 0.3, y=size[1] * 0.7, height=100, width=30,
+    start_btn = Button(color="#a35713", color_text="white", x=int(size[0] * 0.3), y=int(size[1] * 0.7), height=100,
+                       width=30,
                        command=main, text="Старт")
     pokaz_btn = Button(color="#a35713", color_text="white", x=(size[1] // 2), y=190, height=150, width=60,
                        command=results_look, text="Доска Почета")
@@ -678,8 +678,9 @@ def start_game():
                 if not (menu.username is None):
                     for button in buttons:
                         button.update(event)
-                for b in y_n:
-                    b.update(event)
+                else:
+                    for b in y_n:
+                        b.update(event)
 
         if menu.username is None:
             if not menu.password2:
@@ -764,9 +765,9 @@ def main():
                 return None
         board.gener(l_d, l_r)
         if board.three_d:
-            board.three_d_render(d * (int(board.speed * 1.3)))
+            board.three_d_render(d * int(board.speed * 1.3))
         else:
-            board.render(d * (int(board.speed * 1.3)))
+            board.render(d * int(board.speed * 1.3))
         for b in button:
             b.render()
         pygame.display.update()
