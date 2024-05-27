@@ -6,7 +6,7 @@ import sqlite3
 
 size = 900, 600
 pygame.init()
-size = pygame.display.Info().current_w, pygame.display.Info().current_h
+size = [pygame.display.Info().current_w, pygame.display.Info().current_h]
 screen = pygame.display.set_mode(size)
 all_sprites = pygame.sprite.Group()
 obstacle = []
@@ -81,15 +81,17 @@ class Car(pygame.sprite.Sprite):
             self.image = pygame.transform.scale(load_image(f"car{number}.png", colorkey=-1), (90, 150))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
-        self.number_pos = random.randint(0, 4)
-        self.rect.x = 10 + board.left + self.number_pos * 100
+        self.rect.x = 10 + board.left + 2 * 100
         self.rect.y = size[1] - 300
         self.number = number
 
     def update(self, event: pygame.event.Event):
         global running
         if self.rect.x + 120 < size[0] - board.left and (event.key == 1073741903 or event.key == 100):
-            self.rect.x += 120
+            if not board.three_d:
+                self.rect.x += 120
+            else:
+                self.rect.x += size[0] * 0.12
             for ob in obstacle:
                 ob: Obstacle
                 if pygame.sprite.collide_mask(ob, car):
@@ -98,7 +100,10 @@ class Car(pygame.sprite.Sprite):
                                                         (100, 150))
                     board.is_playing = False
         if self.rect.x - 120 > board.left and (event.key == 1073741904 or event.key == 97):
-            self.rect.x -= 120
+            if not board.three_d:
+                self.rect.x -= 120
+            else:
+                self.rect.x -= size[0] * 0.12
             for ob in obstacle:
                 ob: Obstacle
                 if pygame.sprite.collide_mask(ob, car):
@@ -151,7 +156,9 @@ class Board:
         self.pos_y = -self.block * 2
         self.level = 0
         self.speed = 100
-        self.three_d = three_d
+        if three_d:
+            self.three_d = not three_d
+            self.set_stereo()
         self.font = pygame.font.Font(None, 20)
         self.st_pos = -self.block * 2
 
@@ -160,11 +167,16 @@ class Board:
             self.three_d = False
             if size[0] > 900:
                 self.left = (size[0] - 600) // 2
+            self.pos_y = -self.height
         else:
+            self.pos_y = 0.4 * self.height
             if self.left != 150:
                 self.left = 150
             self.three_d = True
-        car.set_three_d()
+        try:
+            car.set_three_d()
+        except NameError:
+            pass
 
     def render(self, y=0):
         pygame.draw.rect(screen, "#004d00", (0, 0, self.width, self.height))
@@ -188,12 +200,27 @@ class Board:
         pygame.draw.polygon(screen, (128, 128, 128),
                             [(int(0.1 * self.width), self.height), (int(0.3 * self.width), int(0.4 * self.height)),
                              (int(0.7 * self.width), int(0.4 * self.height)), (int(0.9 * self.width), self.height)])
-
+        for i in range(6):
+            for j in range(-6, 8, 2):
+                w = 0.4 * self.width + 0.055 * self.width * j
+                w2 = self.width * 0.3 - 0.0275 * self.width * j
+                if j < 0:
+                    w = 0.4 * self.width
+                    w2 = self.width * 0.3
+                pygame.draw.rect(screen, (128, 128, 128),
+                                 (w2, self.pos_y + j * 60,
+                                  w, 60))
+            pygame.draw.line(screen, "white", (
+                board.width * 0.3 + 0.4 / 5 * self.width * i, self.height * 0.4),
+                             (self.width * 0.1 + self.width * 0.8 / 5 * i,
+                              self.height), 10)
+        self.pos_y += y
+        if int(self.pos_y) >= self.height:
+            self.pos_y -= 0.6 * self.height
+        #     self.st_pos = self.pos_y
         all_sprites.draw(screen)
         pygame.draw.rect(screen, "#38aecc", (0, 0, self.width, int(self.height * 0.4)))
-        for i in range(6):
-            pygame.draw.line(screen, "white", (board.width * 0.3 + 0.4 / 5 * board.width * i, board.height * 0.4),
-                             (board.width * 0.1 + board.width * 0.8 / 5 * i, board.height), 2)
+
         pygame.draw.rect(screen, "blue", (size[0] * 0.9, 100, 90, 30))
         screen.blit(self.font.render("Меню", True, "red"), (size[0] * 0.9, 110))
         text = self.font.render(f"""Ваш счёт: {board.ball}""", True, "red")
@@ -209,7 +236,10 @@ class Board:
         else:
             self.ball = 0
             self.is_playing = True
-            self.pos_y = -(size[1])
+            if self.three_d:
+                self.pos_y = 0.4 * self.width
+            else:
+                self.pos_y = -(size[1])
 
     def gener(self, l_d, l_r):
         if len(obstacle) == 0:
@@ -267,7 +297,7 @@ class Obstacle(pygame.sprite.Sprite):
         else:
             while fl:
                 fl = False
-                self.rect.x = 10 + (size[0] * 0.3) + random.randint(0, 4) * (0.4 * size[0])
+                self.rect.x = 10 + (size[0] * 0.3) + random.randint(0, 4) * (0.08 * size[0])
                 self.x = self.rect.x
                 self.rect.y = int(board.height * 0.4)
                 self.y = self.rect.y

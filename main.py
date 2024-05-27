@@ -546,7 +546,7 @@ class Menu:
             main()
 
     def watching_results(self):
-        fon = pygame.transform.scale(load_image('board.png'), (900, 600))
+        fon = pygame.transform.scale(load_image('board.pg'), (900, 600))
         screen.blit(fon, (0, 0))
         font2 = pygame.font.Font(None, 20)
         res = table.get_results()
