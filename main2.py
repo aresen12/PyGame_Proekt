@@ -6,7 +6,7 @@ import sqlite3
 
 size = 900, 600
 pygame.init()
-size = [pygame.display.Info().current_w, pygame.display.Info().current_h]
+size = [pygame.display.Info().current_w, pygame.display.Info().current_h - 30]
 screen = pygame.display.set_mode(size)
 all_sprites = pygame.sprite.Group()
 obstacle = []
@@ -16,6 +16,9 @@ running = True
 pygame.display.set_caption(title="Машинки")
 pygame.mixer.music.load("data/pov.mp3")
 tg = 0.1 * size[1] / (0.2 * size[0])
+tg1 = (0.1 * size[0]) / (0.4 * size[1])
+tg2 = (0.06 * size[0]) / (0.4 * size[1])
+tgens = [-tg1, -tg2, 0, tg2, tg1]
 
 
 def load_image(name, colorkey=None):
@@ -81,17 +84,24 @@ class Car(pygame.sprite.Sprite):
             self.image = pygame.transform.scale(load_image(f"car{number}.png", colorkey=-1), (90, 150))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
-        self.rect.x = 10 + board.left + 2 * 100
+        self.rect.x = 10 + board.left + 4 * 100
+        self.x = self.rect.x
         self.rect.y = size[1] - 300
         self.number = number
+        self.speed_a = 10
+        self.speed_m = 50
+        self.drawing = False
+        self.pres = False
 
-    def update(self, event: pygame.event.Event):
+    def update(self, event: pygame.event.Event, d):
         global running
+        print(event)
+        if event.key == 1073741906:
+            self.pres = True
+            self.speed_a = abs(self.speed_a)
         if self.rect.x + 120 < size[0] - board.left and (event.key == 1073741903 or event.key == 100):
-            if not board.three_d:
-                self.rect.x += 120
-            else:
-                self.rect.x += size[0] * 0.12
+            self.drawing = True
+            self.speed_m = abs(self.speed_m)
             for ob in obstacle:
                 ob: Obstacle
                 if pygame.sprite.collide_mask(ob, car):
@@ -100,10 +110,8 @@ class Car(pygame.sprite.Sprite):
                                                         (100, 150))
                     board.is_playing = False
         if self.rect.x - 120 > board.left and (event.key == 1073741904 or event.key == 97):
-            if not board.three_d:
-                self.rect.x -= 120
-            else:
-                self.rect.x -= size[0] * 0.12
+            self.drawing = True
+            self.speed_m = -abs(self.speed_m)
             for ob in obstacle:
                 ob: Obstacle
                 if pygame.sprite.collide_mask(ob, car):
@@ -111,6 +119,26 @@ class Car(pygame.sprite.Sprite):
                     self.image = pygame.transform.scale(load_image(f"crash_car{car.number}.png", colorkey=-1),
                                                         (100, 150))
                     board.is_playing = False
+
+    def set_speed(self, d):
+        if self.speed_a < 0:
+            board.speed += self.speed_a // 2 * d
+            if board.speed < 100:
+                board.speed = 100
+        else:
+            board.speed += self.speed_a * d
+            if self.number == 1 and board.speed // 4 > 120:
+                board.speed = 120 * 4
+
+        if self.drawing:
+            self.x += d * self.speed_m
+            self.rect.x = int(self.x)
+
+    def del_a(self, event):
+        if event.key == 1073741906:
+            self.speed_a = -abs(self.speed_a)
+        if event.key == 1073741903 or event.key == 1073741904:
+            self.drawing = False
 
     def pl_number(self):
         if self.number < 2:
@@ -139,13 +167,12 @@ class Car(pygame.sprite.Sprite):
             self.image = pygame.transform.scale(load_image(f"car{self.number}_3d.jpg", colorkey=-1), (100, 100))
         else:
             self.image = pygame.transform.scale(load_image(f"car{self.number}.png", colorkey=-1), (100, 150))
-        self.number_pos = random.randint(0, 4)
-        self.rect.x = 10 + board.left + self.number_pos * 120
+        self.rect.x = 10 + board.left + 4 * 120
         self.rect.y = size[1] - 200
 
 
 class Board:
-    def __init__(self, width, height, three_d=True):
+    def __init__(self, width, height, three_d=False):
         self.block = 60  # высота разметки
         self.width = width
         self.height = height
@@ -156,9 +183,8 @@ class Board:
         self.pos_y = -self.block * 2
         self.level = 0
         self.speed = 100
-        if three_d:
-            self.three_d = not three_d
-            self.set_stereo()
+        self.three_d = not three_d
+        self.set_stereo()
         self.font = pygame.font.Font(None, 20)
         self.st_pos = -self.block * 2
 
@@ -194,6 +220,8 @@ class Board:
         screen.blit(self.font.render("Меню", True, "red"), (size[0] * 0.9, 110))
         text = self.font.render(f"""Ваш счёт:{board.ball}""", True, "red")
         screen.blit(text, (size[0] * 0.9, 30))
+        text = self.font.render(f"""Скорость:{board.speed // 4}""", True, "red")
+        screen.blit(text, (size[0] * 0.9, 60))
 
     def three_d_render(self, y=0):
         pygame.draw.rect(screen, "#004d00", (0, 0, self.width, self.height))
@@ -225,6 +253,8 @@ class Board:
         screen.blit(self.font.render("Меню", True, "red"), (size[0] * 0.9, 110))
         text = self.font.render(f"""Ваш счёт: {board.ball}""", True, "red")
         screen.blit(text, (size[0] * 0.9, 30))
+        text = self.font.render(f"""Скорость:{board.speed // 4}""", True, "red")
+        screen.blit(text, (size[0] * 0.9, 60))
 
     def set_left_top(self, left, top):
         self.top = top
@@ -270,13 +300,16 @@ class Obstacle(pygame.sprite.Sprite):
     def __init__(self, *grop, pos=None):
         super().__init__(*grop)
         self.width_k_height = 150 / 90
-        self.number = random.randint(0, 2)
+        self.number = random.randint(0, 3)
         if board.three_d:
             self.st_width = random.randint(5, 10)
             self.image = pygame.transform.scale(load_image(f"ob{self.number}_3d.png", colorkey=-1),
                                                 (self.st_width, self.st_width * self.width_k_height))
         else:
-            self.image = pygame.transform.scale(load_image(f"ob{self.number}.png", colorkey=-1), (90, 150))
+            if self.number == 3:
+                self.image = pygame.transform.scale(load_image(f"ob{self.number}.png", colorkey=-1), (150, 150))
+            else:
+                self.image = pygame.transform.scale(load_image(f"ob{self.number}.png", colorkey=-1), (90, 150))
             self.st_width = 40
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
@@ -284,7 +317,11 @@ class Obstacle(pygame.sprite.Sprite):
         if not board.three_d:
             while fl:
                 fl = False
-                self.rect.x = 10 + board.left + random.randint(0, 4) * 120
+                self.number_pos = random.randint(0, 4)
+                if self.number != 3:
+                    self.rect.x = 10 + board.left + self.number_pos * 120
+                else:
+                    self.rect.x = board.left // 2
                 self.x = self.rect.x
                 if pos is None:
                     self.rect.y = random.randint(-250, -150)
@@ -297,7 +334,8 @@ class Obstacle(pygame.sprite.Sprite):
         else:
             while fl:
                 fl = False
-                self.rect.x = 10 + (size[0] * 0.3) + random.randint(0, 4) * (0.08 * size[0])
+                self.number_pos = random.randint(0, 4)
+                self.rect.x = 10 + (size[0] * 0.3) + self.number_pos * (0.08 * size[0])
                 self.x = self.rect.x
                 self.rect.y = int(board.height * 0.4)
                 self.y = self.rect.y
@@ -320,6 +358,9 @@ class Obstacle(pygame.sprite.Sprite):
                 if self.y - self.rect.y < 1:
                     return True
                 self.st_width += 2 * (self.y - self.rect.y) * tg
+                delta_h = self.y - self.rect.y
+                self.x += tgens[self.number_pos] * delta_h
+                self.rect.x = int(self.x)
                 self.rect.y = int(self.y)
                 if 100 > self.st_width:
                     self.image = pygame.transform.scale(load_image(f"ob{self.number}_3d.png", colorkey=-1),
@@ -740,15 +781,19 @@ def main():
     button = [
         Button(img="camera.png", text="", x=10, y=10, width=40, height=30, command=board.set_stereo, color_key=-1)]
     while running:
+        d = tick.tick() / 1000
         for event in pygame.event.get():
+            print(event.type)
             if event.type == pygame.QUIT:
                 sys.exit(0)
             if event.type == 768:
-                car.update(event)
+                car.update(event, d)
+            if event.type == 769:
+                car.del_a(event)
             if event.type == chet:
                 board.set_ball()
                 if board.ball % 3 == 0:
-                    board.speed = board.speed + 30
+                    # board.speed = board.speed + 30
                     if l_d > -200:
                         l_d += 200
                     if l_r < 200:
@@ -765,7 +810,7 @@ def main():
                     board.set_ball(clear=-1)
                     start_game()
                     return None
-        d = tick.tick() / 1000
+
         for ob in obstacle:
             ob: Obstacle
             if not ob.update(l_d, l_r, d):
@@ -794,6 +839,7 @@ def main():
                 wait()
                 return None
         board.gener(l_d, l_r)
+        car.set_speed(d)
         if board.three_d:
             board.three_d_render(d * int(board.speed * 1.3))
         else:
